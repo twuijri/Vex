@@ -3,7 +3,6 @@ version: '3.8'
 services:
   backend:
     image: ghcr.io/twuijri/vex-backend:latest
-    container_name: vex_backend
     restart: always
     volumes:
       - ./data:/app/data
@@ -20,7 +19,6 @@ services:
 
   bot:
     image: ghcr.io/twuijri/vex-bot:latest
-    container_name: vex_bot
     restart: always
     volumes:
       - ./data:/app/data
@@ -36,7 +34,6 @@ services:
 
   frontend:
     image: ghcr.io/twuijri/vex-frontend:latest
-    container_name: vex_frontend
     restart: always
     ports:
       - "3000:80"
