@@ -26,7 +26,7 @@
 ### Prerequisites / المتطلبات
 - Docker & Docker Compose
 - Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
-- MongoDB (Optional, included in Docker)
+- MongoDB Connection String (Atlas or External)
 
 ### Steps / الخطوات
 

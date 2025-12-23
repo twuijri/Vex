@@ -21,17 +21,6 @@ services:
     dns:
       - 8.8.8.8
 
-  mongodb:
-    image: mongo:6.0
-    container_name: boter_mongo
-    restart: always
-    volumes:
-      - ./data/mongo:/data/db
-    networks:
-      - boter_network
-    ports:
-      - "27017:27017"
-
   bot:
     build:
       context: .

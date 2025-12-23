@@ -13,8 +13,10 @@ services:
       - vex_network
     dns:
       - 8.8.8.8
-    depends_on:
-      - mongodb
+    networks:
+      - vex_network
+    dns:
+      - 8.8.8.8
 
   bot:
     image: ghcr.io/twuijri/vex-bot:latest
@@ -27,7 +29,6 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
     depends_on:
       - backend
-      - mongodb
     networks:
       - vex_network
     dns:
@@ -50,16 +51,8 @@ services:
     networks:
       - vex_network
 
-  mongodb:
-    image: mongo:6.0
-    container_name: vex_mongo
-    restart: always
-    volumes:
-      - ./data/mongo:/data/db
-    networks:
-      - vex_network
-    ports:
-      - "27017:27017"
+    dns:
+      - 8.8.8.8
 
 networks:
   vex_network:
