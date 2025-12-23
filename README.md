@@ -65,8 +65,8 @@ Run the entire system with a single command (Linux/Mac):
 ```bash
 curl -o docker-compose.yml https://raw.githubusercontent.com/twuijri/Vex/main/docker-compose.ghcr.yml && docker-compose up -d
 ```
-*Note: You still need to edit `.env` or set `BOT_TOKEN` environment variable.*
-*ملاحظة: لا زلت بحاجة لإضافة التوكن في ملف .env أو كمتغير بيئة.*
+*Note: After running, open `http://localhost:3000` to configure the Bot Token & Admin User via the Setup Wizard.*
+*ملاحظة: بعد التشغيل، افتح الرابط `http://localhost:3000` لإدخال التوكن وإعداد المشرف عبر المعالج التلقائي.*
 
 ---
 
