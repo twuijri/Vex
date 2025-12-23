@@ -56,6 +56,32 @@
    افتح المتصفح:
    `http://localhost:3000`
 
+    `http://localhost:3000`
+
+### 🚀 Option 2: Run using Pre-built Docker Images (Faster) | التشغيل المباشر
+Run Vex without building the code manually (No git clone needed for code, just the compose file).
+تشغيل البوت بدون الحاجة لبناء الكود يدوياً (أسرع).
+
+1. **Download the Compose File / تحميل ملف التشغيل**
+   ```bash
+   wget https://raw.githubusercontent.com/twuijri/Vex/main/docker-compose.ghcr.yml -O docker-compose.yml
+   ```
+
+2. **Create Configuration / إنشاء الإعدادات**
+   Create a `.env` file with your details:
+   أنشئ ملف `.env` وضع فيه بياناتك:
+   ```bash
+   touch .env
+   # Add: BOT_TOKEN, ADMIN_PASSWORD, etc.
+   ```
+
+3. **Run / تشغيل**
+   ```bash
+   docker-compose up -d
+   ```
+   *This will automatically pull the latest images from GitHub Container Registry.*
+   *سيقوم هذا الأمر بسحب أحدث النسخ تلقائياً من GitHub.*
+
 ---
 
 ## 🛠️ Configuration / الإعدادات
