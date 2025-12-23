@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/twuijri/vex-backend:latest
+    container_name: vex_backend
+    restart: always
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/boter_db
+    networks:
+      - vex_network
+    dns:
+      - 8.8.8.8
+    depends_on:
+      - mongodb
+
+  bot:
+    image: ghcr.io/twuijri/vex-bot:latest
+    container_name: vex_bot
+    restart: always
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/boter_db
+      - BOT_TOKEN=${BOT_TOKEN}
+    depends_on:
+      - backend
+      - mongodb
+    networks:
+      - vex_network
+    dns:
+      - 8.8.8.8
+
+  frontend:
+    image: ghcr.io/twuijri/vex-frontend:latest
+    container_name: vex_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    environment:
+      # In production, Nginx usually proxies /api to backend, OR we hardcode API URL in build?
+      # React build is static. So ENV vars at runtime don't work easily without injection script.
+      # For now, let's assume valid forwarding or default localhost:8000 for browser access.
+      # Actually, VITE_API_TARGET is a build-time var.
+      # Since we build in GH Actions, we need to decide the API URL.
+      # If user runs locally, backend is at localhost:8000.
+      - REACT_APP_API_URL=http://localhost:8000
+    networks:
+      - vex_network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: vex_mongo
+    restart: always
+    volumes:
+      - ./data/mongo:/data/db
+    networks:
+      - vex_network
+    ports:
+      - "27017:27017"
+
+networks:
+  vex_network:
+    driver: bridge
