@@ -369,6 +369,28 @@ async def enforcement_handler(message: Message):
             except:
                 pass
             return
+            
+    # D. Phone Number Check (Regex)
+    # Checks for phone numbers in text (English & Arabic digits) if 'contact' is disabled.
+    if not media_settings.get("contact", True):
+        # Regex to find 10+ digits. Simple check.
+        # Supports Arabic (٠-٩) and English (0-9)
+        # Matches: 0555555210, ٠٥٥٥٥٥٥٢١٠, +966..., 00966...
+        import re
+        content_text = message.text or message.caption or ""
+        # Remove spaces and dashes for checking
+        clean_text = re.sub(r'[\s\-]', '', content_text)
+        
+        # Pattern: (Start with + or 00 or 0 or ٠) followed by 8+ digits
+        # Arabic Zero: ٠ | English Zero: 0
+        phone_pattern = r'(\+|00|0|٠٠|٠)[\d٠-٩]{8,}'
+        
+        if re.search(phone_pattern, clean_text):
+            try:
+                await message.delete()
+            except:
+                pass
+            return
 
     # D. Forward Check
     is_forward = message.forward_origin is not None
