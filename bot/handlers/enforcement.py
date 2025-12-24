@@ -402,14 +402,31 @@ async def enforcement_handler(message: Message):
         return
 
     # -------------------------------------------------------------------------
+    # 🧹 PRE-PROCESS TEXT (Anti-Spam / Anti-Obfuscation)
+    # -------------------------------------------------------------------------
+    # Remove "strikethrough", "tashkeel", and other "decorations" used by spammers.
+    # Ex: "أط̶لع" -> "أطلع"
+    import unicodedata
+    raw_text = message.text or message.caption or ""
+    
+    # Normalize: Decompose characters (NFD), filter out non-spacing marks (Mn), then Recompose (NFC)
+    # This removes accents, strikethroughs, and Arabic tashkeel.
+    clean_content = ''.join(c for c in unicodedata.normalize('NFD', raw_text)
+                   if unicodedata.category(c) != 'Mn')
+                   
+    # Normalize similar chars (like Persian Kaf/Yeh to Arabic) if needed, but 'Mn' removal is powerful enough for strikethrough.
+    
+    # Update content_text variable for subsequent checks
+    content_text = clean_content
+
+    # -------------------------------------------------------------------------
     # 🚫 3. BANNED WORDS CHECK
     # -------------------------------------------------------------------------
-    content_text = message.text or message.caption or ""
     banned_words = settings.get("banned_words", [])
     
     if content_text and banned_words:
         for word in banned_words:
-            if word in content_text:
+            if word in content_text: # Check against CLEANED text
                 try:
                     await message.delete()
                     action = settings.get("banned_words_action", "delete")
@@ -418,3 +435,22 @@ async def enforcement_handler(message: Message):
                 except Exception as e:
                     logger.error(f"Failed to enforce banned word {chat_id}: {e}")
                 return
+
+    # D. Phone Number Check (Regex)
+    # Checks for phone numbers in text (English & Arabic digits) if 'contact' is disabled.
+    if not media_settings.get("contact", True):
+        # Clean specific chars for phone check (spaces, dashes) + use the ALREADY CLEANED content from above
+        import re
+        # Remove spaces and dashes
+        phone_clean_text = re.sub(r'[\s\-]', '', content_text)
+        
+        # Pattern: (Start with + or 00 or 0 or ٠) followed by 8+ digits
+        # Arabic Zero: ٠ | English Zero: 0
+        phone_pattern = r'(\+|00|0|٠٠|٠)[\d٠-٩]{8,}'
+        
+        if re.search(phone_pattern, phone_clean_text):
+            try:
+                await message.delete()
+            except:
+                pass
+            return
