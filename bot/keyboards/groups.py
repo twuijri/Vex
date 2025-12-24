@@ -19,7 +19,7 @@ def get_main_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📜 القوانين", callback_data=f"settings_rules:{chat_id}"),
             InlineKeyboardButton(text="🏳️ القائمة البيضاء", callback_data=f"settings_whitelist:{chat_id}")
         ],
-        [InlineKeyboardButton(text="❌ إغلاق", callback_data="close_settings")]
+        [InlineKeyboardButton(text="❌ إغلاق.", callback_data="close_settings")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
