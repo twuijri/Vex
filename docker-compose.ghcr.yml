@@ -5,9 +5,9 @@ services:
     image: ghcr.io/twuijri/vex-backend:latest
     restart: always
     volumes:
-      - ./data:/app/data
+      - vex_data:/app/data
     environment:
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=${MONGODB_URI:-}
     networks:
       - vex_network
     dns:
@@ -19,8 +19,8 @@ services:
     volumes:
       - vex_data:/app/data
     environment:
-      - MONGODB_URI=${MONGODB_URI}
-      - BOT_TOKEN=${BOT_TOKEN}
+      - MONGODB_URI=${MONGODB_URI:-}
+      - BOT_TOKEN=${BOT_TOKEN:-}
     depends_on:
       - backend
     networks:
@@ -44,3 +44,6 @@ services:
 networks:
   vex_network:
     driver: bridge
+
+volumes:
+  vex_data:
