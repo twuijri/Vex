@@ -418,6 +418,9 @@ async def enforcement_handler(message: Message):
     # This removes accents, strikethroughs, and Arabic tashkeel.
     clean_content = ''.join(c for c in unicodedata.normalize('NFD', raw_text)
                    if unicodedata.category(c) != 'Mn')
+    
+    # Explicitly remove Tatweel (Kashida) 'ـ' which is not a proper mark but used for spam
+    clean_content = clean_content.replace("ـ", "")
                    
     # Normalize similar chars (like Persian Kaf/Yeh to Arabic) if needed, but 'Mn' removal is powerful enough for strikethrough.
     
