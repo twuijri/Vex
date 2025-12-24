@@ -359,6 +359,11 @@ async def enforcement_handler(message: Message):
         # Enforce Permissions
         violations = []
         if has_mention and not media_settings.get("mention", True): violations.append("mention")
+        
+        # Fallback: Regex Check for @ if mention is disabled, to catch edge cases
+        if not media_settings.get("mention", True) and "@" in content_text and "mention" not in violations:
+             violations.append("mention")
+
         if has_hashtag and not media_settings.get("hashtag", True): violations.append("hashtag")
         if has_tg_link and not media_settings.get("telegram_link", False): violations.append("telegram_link")
         if has_general_link and not media_settings.get("link", False): violations.append("link")
