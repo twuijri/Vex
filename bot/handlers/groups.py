@@ -140,10 +140,16 @@ async def settings_command(message: Message):
 @router.callback_query(F.data == "close_settings")
 async def close_settings_handler(callback: CallbackQuery):
     """Close the settings menu."""
+    logger.info(f"🔘 Close Settings Clicked by {callback.from_user.id}")
     try:
         await callback.message.delete()
-    except:
-        await callback.answer("تم الإغلاق")
+    except Exception as e:
+        logger.error(f"❌ Failed to delete settings message: {e}")
+        try:
+             # Fallback: Just edit text if delete fails
+             await callback.message.edit_text("✅ <b>تم إغلاق القائمة.</b>")
+        except:
+             await callback.answer("تم الإغلاق")
 
 @router.callback_query(F.data.startswith("back_to_main:"))
 async def back_to_main_handler(callback: CallbackQuery):
