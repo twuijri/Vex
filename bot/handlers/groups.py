@@ -137,6 +137,14 @@ async def settings_command(message: Message):
 # 🧭 NAVIGATION CALLBACKS
 # -----------------------------------------------------------------------------
 
+@router.callback_query(F.data == "close_settings")
+async def close_settings_handler(callback: CallbackQuery):
+    """Close the settings menu."""
+    try:
+        await callback.message.delete()
+    except:
+        await callback.answer("تم الإغلاق")
+
 @router.callback_query(F.data.startswith("back_to_main:"))
 async def back_to_main_handler(callback: CallbackQuery):
     chat_id = int(callback.data.split(":")[1])
