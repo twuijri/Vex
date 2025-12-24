@@ -84,10 +84,28 @@ def get_system_config() -> SystemConfig:
     
     # Defaults if config is empty (First Run)
     # قيم افتراضية إذا كانت الإعدادات فارغة (أول تشغيل)
+    # Defaults if config is empty (First Run)
+    # قيم افتراضية إذا كانت الإعدادات فارغة (أول تشغيل)
     if not config:
+        # Check Environment Variables first
+        env_admin_user = os.getenv("ADMIN_USERNAME", "")
+        env_admin_pass = os.getenv("ADMIN_PASSWORD", "")
+        env_mongo_uri = os.getenv("MONGODB_URI")
+        env_bot_token = os.getenv("BOT_TOKEN")
+
+        password_hash = ""
+        if env_admin_pass:
+             try:
+                 from backend.auth import get_password_hash
+                 password_hash = get_password_hash(env_admin_pass)
+             except ImportError:
+                 pass # Should not happen
+
         return SystemConfig(
-            admin_username="", 
-            admin_password_hash="", 
+            admin_username=env_admin_user, 
+            admin_password_hash=password_hash,
+            mongo_uri=env_mongo_uri,
+            bot_token=env_bot_token, 
             is_setup_complete=False
         )
     

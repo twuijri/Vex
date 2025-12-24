@@ -63,7 +63,7 @@ Run the entire system with a single command (Linux/Mac):
 تشغيل النظام بالكامل بأمر واحد:
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/twuijri/Vex/main/docker-compose.ghcr.yml && docker-compose up -d
+curl -o docker-compose.yml https://raw.githubusercontent.com/twuijri/Vex/main/docker-compose.ghcr.yml && docker compose up -d
 ```
 *Note: After running, open `http://localhost:3000` to configure the Bot Token & Admin User via the Setup Wizard.*
 *ملاحظة: بعد التشغيل، افتح الرابط `http://localhost:3000` لإدخال التوكن وإعداد المشرف عبر المعالج التلقائي.*
