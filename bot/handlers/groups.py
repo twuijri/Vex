@@ -171,7 +171,7 @@ async def manage_group_handler(callback: CallbackQuery):
 
     title = settings.get("title", f"Group {chat_id}")
     await callback.message.edit_text(
-        f"⚙️ <b>إعدادات: {title}</b>\n\nاختر خياراً للتعديل:",
+        f"⚙️ <b>إعدادات: {title} (v1.1)</b>\n\nاختر خياراً للتعديل:",
         reply_markup=get_main_settings_keyboard(chat_id)
     )
     await callback.answer()
