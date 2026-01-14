@@ -3,14 +3,12 @@ version: '3.8'
 services:
   bot:
     build: .
-    container_name: telegram_bot
+    container_name: vex_bot
     restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - TZ=Asia/Riyadh
+    ports:
+      - "8000:8000"
     volumes:
-      - ./logs:/app/logs
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:
