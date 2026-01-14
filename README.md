@@ -33,8 +33,8 @@ http://localhost:8000
 ## 🌐 على السيرفر
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vex-bot.git
-cd vex-bot
+git clone https://github.com/twuijri/Vex.git
+cd Vex
 docker-compose up -d
 docker-compose logs -f
 ```
