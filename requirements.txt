@@ -1,0 +1,23 @@
+# Core Framework
+aiogram==3.13.1
+aiohttp==3.10.5
+
+# Web UI for Setup
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# Database
+motor==3.6.0
+beanie==1.26.0
+pymongo==4.9.1
+
+# Scheduler
+APScheduler==3.10.4
+
+# Environment
+python-dotenv==1.0.1
+
+# Utilities
+pytz==2024.2
+
