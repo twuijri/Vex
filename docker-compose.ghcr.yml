@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/twuijri/vex-backend:latest
+    restart: always
+    volumes:
+      - vex_data:/app/data
+    environment:
+      - MONGODB_URI=${MONGODB_URI:-}
+    networks:
+      - vex_network
+    dns:
+      - 8.8.8.8
+
+  bot:
+    image: ghcr.io/twuijri/vex-bot:latest
+    restart: always
+    volumes:
+      - vex_data:/app/data
+    environment:
+      - MONGODB_URI=${MONGODB_URI:-}
+      - BOT_TOKEN=${BOT_TOKEN:-}
+    depends_on:
+      - backend
+    networks:
+      - vex_network
+    dns:
+      - 8.8.8.8
+
+  frontend:
+    image: ghcr.io/twuijri/vex-frontend:latest
+    restart: always
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    networks:
+      - vex_network
+
+    dns:
+      - 8.8.8.8
+
+networks:
+  vex_network:
+    driver: bridge
+
+volumes:
+  vex_data:

@@ -1,16 +1,58 @@
 version: '3.8'
 
 services:
-  bot:
-    build: .
-    container_name: vex_bot
-    restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: boter_backend
+    restart: always
     ports:
       - "8000:8000"
     volumes:
+      - ./backend:/app/backend
       - ./data:/app/data
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      - ./bot:/app/bot
+    environment:
+      # Ensure this URI is set in your .env or config.db to point to Cloud
+      - MONGODB_URI=${MONGODB_URI}
+    networks:
+      - boter_network
+    dns:
+      - 8.8.8.8
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bot
+    container_name: boter_bot
+    restart: always
+    volumes:
+      - ./bot:/app/bot
+      - ./data:/app/data
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+    depends_on:
+      - backend
+    networks:
+      - boter_network
+    dns:
+      - 8.8.8.8
+
+  frontend:
+    image: node:22-alpine
+    container_name: boter_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:5173"
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host"
+    environment:
+      - VITE_API_TARGET=http://backend:8000
+    networks:
+      - boter_network
+
+networks:
+  boter_network:
+    driver: bridge

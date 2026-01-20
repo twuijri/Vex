@@ -1,395 +1,135 @@
-"""
-خدمة الجدولة - إدارة المهام المجدولة
-
-هذا الملف مسؤول عن:
-1. القفل/الفتح التلقائي اليومي
-2. إدارة قفل المؤقت
-3. إرسال إشعارات القفل/الفتح
-"""
+import asyncio
 import logging
-from datetime import datetime, time, timedelta
-from typing import Optional
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.date import DateTrigger
-
-from bot.database.models import Group
+from datetime import datetime
+import pytz
+from bot.services.db import db
+from bot.utils.permissions import set_group_silent_mode
+from aiogram import Bot
 
 logger = logging.getLogger(__name__)
 
-# الـ Scheduler العام
-scheduler = AsyncIOScheduler()
+# Riyadh Timezone for consistency
+TZ = pytz.timezone('Asia/Riyadh')
 
-
-async def lock_group(chat_id: int, bot):
+async def scheduler_task(bot: Bot):
     """
-    الوصف:
-        قفل المجموعة تلقائياً
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-        bot: كائن البوت
-    
-    السلوك:
-        1. تفعيل القفل اليدوي
-        2. إرسال رسالة القفل
-        3. تطبيق الصلاحيات المحفوظة
+    Background Task that runs every 60 seconds.
+    Checks for: 1. Timer Expiry 2. Schedule Open/Close
     """
-    try:
-        # جلب بيانات المجموعة
-        group = await Group.find_one(Group.chat_id == chat_id)
-        
-        if not group or not group.active:
-            logger.warning(f"Group {chat_id} not found or inactive")
-            return
-        
-        # تفعيل القفل
-        group.silent.manual_lock = True
-        await group.save()
-        
-        # إرسال رسالة القفل
-        lock_message = group.silent.lock_message or "🔕 تم قفل المجموعة"
-        
+    logger.info("⏳ Scheduler started...")
+    while True:
         try:
-            await bot.send_message(
-                chat_id=chat_id,
-                text=lock_message
-            )
-        except Exception as e:
-            logger.error(f"Failed to send lock message to {chat_id}: {e}")
-        
-        logger.info(f"Group {chat_id} locked automatically")
-        
-    except Exception as e:
-        logger.error(f"Error in lock_group for {chat_id}: {e}", exc_info=True)
-
-
-async def unlock_group(chat_id: int, bot):
-    """
-    الوصف:
-        فتح المجموعة تلقائياً
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-        bot: كائن البوت
-    
-    السلوك:
-        1. إلغاء القفل اليدوي
-        2. إرسال رسالة الفتح
-    """
-    try:
-        # جلب بيانات المجموعة
-        group = await Group.find_one(Group.chat_id == chat_id)
-        
-        if not group or not group.active:
-            logger.warning(f"Group {chat_id} not found or inactive")
-            return
-        
-        # إلغاء القفل
-        group.silent.manual_lock = False
-        await group.save()
-        
-        # إرسال رسالة الفتح
-        unlock_message = group.silent.unlock_message or "🔔 تم فتح المجموعة"
-        
-        try:
-            await bot.send_message(
-                chat_id=chat_id,
-                text=unlock_message
-            )
-        except Exception as e:
-            logger.error(f"Failed to send unlock message to {chat_id}: {e}")
-        
-        logger.info(f"Group {chat_id} unlocked automatically")
-        
-    except Exception as e:
-        logger.error(f"Error in unlock_group for {chat_id}: {e}", exc_info=True)
-
-
-async def schedule_daily_lock(chat_id: int, open_time: time, close_time: time, bot):
-    """
-    الوصف:
-        جدولة القفل/الفتح اليومي
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-        open_time (time): وقت الفتح
-        close_time (time): وقت الإغلاق
-        bot: كائن البوت
-    
-    السلوك:
-        إنشاء مهام مجدولة يومية للقفل والفتح
-    """
-    try:
-        # حذف المهام القديمة إن وجدت
-        job_id_lock = f"lock_{chat_id}"
-        job_id_unlock = f"unlock_{chat_id}"
-        
-        if scheduler.get_job(job_id_lock):
-            scheduler.remove_job(job_id_lock)
-        
-        if scheduler.get_job(job_id_unlock):
-            scheduler.remove_job(job_id_unlock)
-        
-        # جدولة القفل
-        scheduler.add_job(
-            lock_group,
-            trigger=CronTrigger(
-                hour=close_time.hour,
-                minute=close_time.minute
-            ),
-            args=[chat_id, bot],
-            id=job_id_lock,
-            replace_existing=True
-        )
-        
-        # جدولة الفتح
-        scheduler.add_job(
-            unlock_group,
-            trigger=CronTrigger(
-                hour=open_time.hour,
-                minute=open_time.minute
-            ),
-            args=[chat_id, bot],
-            id=job_id_unlock,
-            replace_existing=True
-        )
-        
-        logger.info(
-            f"Scheduled daily lock/unlock for group {chat_id}: "
-            f"Lock at {close_time}, Unlock at {open_time}"
-        )
-        
-    except Exception as e:
-        logger.error(f"Error in schedule_daily_lock for {chat_id}: {e}", exc_info=True)
-
-
-async def cancel_daily_lock(chat_id: int):
-    """
-    الوصف:
-        إلغاء جدولة القفل/الفتح اليومي
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-    
-    السلوك:
-        حذف المهام المجدولة
-    """
-    try:
-        job_id_lock = f"lock_{chat_id}"
-        job_id_unlock = f"unlock_{chat_id}"
-        
-        if scheduler.get_job(job_id_lock):
-            scheduler.remove_job(job_id_lock)
-        
-        if scheduler.get_job(job_id_unlock):
-            scheduler.remove_job(job_id_unlock)
-        
-        logger.info(f"Cancelled daily lock/unlock for group {chat_id}")
-        
-    except Exception as e:
-        logger.error(f"Error in cancel_daily_lock for {chat_id}: {e}", exc_info=True)
-
-
-async def schedule_timer_lock(chat_id: int, duration_minutes: int, bot):
-    """
-    الوصف:
-        جدولة قفل مؤقت
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-        duration_minutes (int): مدة القفل بالدقائق
-        bot: كائن البوت
-    
-    السلوك:
-        1. قفل المجموعة فوراً
-        2. جدولة الفتح التلقائي بعد المدة المحددة
-    """
-    try:
-        # جلب بيانات المجموعة
-        group = await Group.find_one(Group.chat_id == chat_id)
-        
-        if not group or not group.active:
-            logger.warning(f"Group {chat_id} not found or inactive")
-            return
-        
-        # حساب وقت الفتح
-        end_time = datetime.now() + timedelta(minutes=duration_minutes)
-        
-        # تفعيل قفل المؤقت
-        group.silent.timer_lock.active = True
-        group.silent.timer_lock.end_time = end_time
-        await group.save()
-        
-        # قفل المجموعة فوراً
-        await lock_group(chat_id, bot)
-        
-        # جدولة الفتح التلقائي
-        job_id = f"timer_unlock_{chat_id}"
-        
-        if scheduler.get_job(job_id):
-            scheduler.remove_job(job_id)
-        
-        scheduler.add_job(
-            unlock_timer_lock,
-            trigger=DateTrigger(run_date=end_time),
-            args=[chat_id, bot],
-            id=job_id,
-            replace_existing=True
-        )
-        
-        logger.info(
-            f"Scheduled timer lock for group {chat_id}: "
-            f"Duration {duration_minutes} minutes, End at {end_time}"
-        )
-        
-    except Exception as e:
-        logger.error(f"Error in schedule_timer_lock for {chat_id}: {e}", exc_info=True)
-
-
-async def unlock_timer_lock(chat_id: int, bot):
-    """
-    الوصص:
-        فتح قفل المؤقت تلقائياً
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-        bot: كائن البوت
-    
-    السلوك:
-        1. إلغاء قفل المؤقت
-        2. فتح المجموعة
-    """
-    try:
-        # جلب بيانات المجموعة
-        group = await Group.find_one(Group.chat_id == chat_id)
-        
-        if not group or not group.active:
-            logger.warning(f"Group {chat_id} not found or inactive")
-            return
-        
-        # إلغاء قفل المؤقت
-        group.silent.timer_lock.active = False
-        group.silent.timer_lock.end_time = None
-        await group.save()
-        
-        # فتح المجموعة
-        await unlock_group(chat_id, bot)
-        
-        logger.info(f"Timer lock ended for group {chat_id}")
-        
-    except Exception as e:
-        logger.error(f"Error in unlock_timer_lock for {chat_id}: {e}", exc_info=True)
-
-
-async def cancel_timer_lock(chat_id: int):
-    """
-    الوصف:
-        إلغاء قفل المؤقت يدوياً
-    
-    المعاملات:
-        chat_id (int): معرف المجموعة
-    
-    السلوك:
-        1. حذف المهمة المجدولة
-        2. تحديث قاعدة البيانات
-    """
-    try:
-        # حذف المهمة المجدولة
-        job_id = f"timer_unlock_{chat_id}"
-        
-        if scheduler.get_job(job_id):
-            scheduler.remove_job(job_id)
-        
-        # تحديث قاعدة البيانات
-        group = await Group.find_one(Group.chat_id == chat_id)
-        
-        if group:
-            group.silent.timer_lock.active = False
-            group.silent.timer_lock.end_time = None
-            await group.save()
-        
-        logger.info(f"Cancelled timer lock for group {chat_id}")
-        
-    except Exception as e:
-        logger.error(f"Error in cancel_timer_lock for {chat_id}: {e}", exc_info=True)
-
-
-async def load_scheduled_tasks(bot):
-    """
-    الوصف:
-        تحميل المهام المجدولة من قاعدة البيانات عند بدء البوت
-    
-    المعاملات:
-        bot: كائن البوت
-    
-    السلوك:
-        1. جلب جميع المجموعات النشطة
-        2. إعادة جدولة القفل اليومي
-        3. إعادة جدولة قفل المؤقت النشط
-    """
-    try:
-        # جلب جميع المجموعات النشطة
-        groups = await Group.find(Group.active == True).to_list()
-        
-        for group in groups:
-            # إعادة جدولة القفل اليومي
-            if group.silent.daily_schedule.active:
-                open_time = group.silent.daily_schedule.open_time
-                close_time = group.silent.daily_schedule.close_time
-                
-                if open_time and close_time:
-                    await schedule_daily_lock(group.chat_id, open_time, close_time, bot)
+            now = datetime.now(TZ)
+            current_time_str = now.strftime("%H:%M")
             
-            # إعادة جدولة قفل المؤقت النشط
-            if group.silent.timer_lock.active and group.silent.timer_lock.end_time:
-                end_time = group.silent.timer_lock.end_time
+            # 1. Get ALL active groups
+            active_groups = await db.get_active_groups()
+            
+            for group in active_groups:
+                chat_id = group["chat_id"]
+                silent_s = group.get("silent", {})
                 
-                # التحقق من أن الوقت لم ينتهي بعد
-                if end_time > datetime.now():
-                    job_id = f"timer_unlock_{group.chat_id}"
+                # Messages Config
+                messages = silent_s.get("messages", {})
+                msg_open = messages.get("daily_open", "🔓 <b>تم فتح المجموعة حسب الجدول اليومي.</b>")
+                msg_close = messages.get("daily_close", "🔒 <b>تم قفل المجموعة حسب الجدول اليومي.</b>")
+                msg_timer = messages.get("timer_lock", "⏱️ <b>انتهى وقت المؤقت.</b>")
+                
+                # --- A. TIMER LOGIC ---
+                timer = silent_s.get("timer", {})
+                if timer.get("active"):
+                    end_time = timer.get("end_time")
+                    if end_time and datetime.now().timestamp() >= end_time:
+                        # Timer Expired -> Unlock
+                        await set_group_silent_mode(bot, chat_id, lock=False)
+                        
+                        await db.update_group_settings(chat_id, {
+                            "silent.is_locked": False,
+                            "silent.timer.active": False,
+                            "silent.timer.end_time": None
+                        })
+                        await bot.send_message(chat_id, "🔓 <b>انتهى القفل المؤقت.</b>")
+
+                # --- B. SCHEDULE LOGIC ---
+                # --- B. SCHEDULE LOGIC (Strict State Enforcement) ---
+                schedule = silent_s.get("schedule", {})
+                if schedule.get("active"):
+                    open_str = schedule.get("open_time", "08:00")
+                    close_str = schedule.get("close_time", "23:00")
                     
-                    scheduler.add_job(
-                        unlock_timer_lock,
-                        trigger=DateTrigger(run_date=end_time),
-                        args=[group.chat_id, bot],
-                        id=job_id,
-                        replace_existing=True
-                    )
+                    # Parse Hours/Minutes
+                    def parse_time(t_str):
+                        h, m = map(int, t_str.split(":"))
+                        return h * 60 + m
                     
-                    logger.info(f"Restored timer lock for group {group.chat_id}")
-                else:
-                    # الوقت انتهى، إلغاء القفل
-                    await unlock_timer_lock(group.chat_id, bot)
+                    current_mins = now.hour * 60 + now.minute
+                    open_mins = parse_time(open_str)
+                    close_mins = parse_time(close_str)
+                    
+                    # specific minute checks for NOTIFICATION
+                    is_transition_minute = (current_time_str == open_str) or (current_time_str == close_str)
+                    
+                    # Logic: When should it be LOCKED (Silent)?
+                    # It is locked between CloseTime (Start of Silence) and OpenTime (End of Silence).
+                    
+                    should_be_locked = False
+                    
+                    if close_mins < open_mins:
+                         # e.g. Close 01:00, Open 08:00 (Night Lock)
+                         # Locked if now >= 01:00 AND now < 08:00
+                         if close_mins <= current_mins < open_mins:
+                             should_be_locked = True
+                    else:
+                         # e.g. Close 23:00, Open 08:00 (Overnight Lock)
+                         # Locked if now >= 23:00 OR now < 08:00
+                         if current_mins >= close_mins or current_mins < open_mins:
+                             should_be_locked = True
+                    
+                    current_locked = silent_s.get("is_locked", False)
+                    timer_active = timer.get("active", False)
+                    
+                    # DEBUG LOGGING (Expanded)
+                    log_emoji = "🔒" if should_be_locked else "🔓"
+                    logger.info(f"🔍 Sched Check [{chat_id}]: {now.strftime('%H:%M:%S')} | "
+                                f"Win={open_str}-{close_str} | Target={log_emoji} (Lock={should_be_locked}) | "
+                                f"State={current_locked} | Timer={timer_active}")
+                    
+                    if should_be_locked and not current_locked:
+                        # ENFORCE LOCK
+                        await set_group_silent_mode(bot, chat_id, lock=True)
+                        await db.update_group_settings(chat_id, {"silent.is_locked": True})
+                        
+                        # Notify on State Change (Always)
+                        try:
+                             await bot.send_message(chat_id, msg_close)
+                        except:
+                             pass
+                             
+                    elif not should_be_locked and current_locked:
+                        # ENFORCE OPEN
+                        # Check Timer: If Timer is Active, DO NOT UNLOCK via Schedule.
+                        if not timer_active:
+                            # DOUBLE CHECK: Are we ABSOLUTELY sure we should unlock?
+                            # If should_be_locked is False, then we are in Open Window.
+                            await set_group_silent_mode(bot, chat_id, lock=False)
+                            await db.update_group_settings(chat_id, {"silent.is_locked": False})
+                            
+                            try:
+                                 await bot.send_message(chat_id, msg_open)
+                            except:
+                                 pass
+                        else:
+                            logger.info(f"⏳ Timer active for {chat_id}, skipping schedule unlock.")
+
+        except Exception as e:
+            logger.error(f"❌ Scheduler Error: {e}")
         
-        logger.info(f"Loaded scheduled tasks for {len(groups)} groups")
+        # Wait until next minute starts (Sync)
+        # Sleep seconds = 60 - current_seconds
+        now = datetime.now(TZ)
+        sleep_seconds = 60 - now.second + 1 # Add 1s buffer to ensure we land in the next minute
+        if sleep_seconds > 60: sleep_seconds = 1 
+        # If now.second=59, sleep=2. Wakes at 01.
         
-    except Exception as e:
-        logger.error(f"Error in load_scheduled_tasks: {e}", exc_info=True)
-
-
-def start_scheduler():
-    """
-    الوصف:
-        بدء الـ Scheduler
-    
-    السلوك:
-        تشغيل الـ Scheduler إذا لم يكن يعمل
-    """
-    if not scheduler.running:
-        scheduler.start()
-        logger.info("Scheduler started")
-
-
-def stop_scheduler():
-    """
-    الوصف:
-        إيقاف الـ Scheduler
-    
-    السلوك:
-        إيقاف الـ Scheduler بشكل آمن
-    """
-    if scheduler.running:
-        scheduler.shutdown()
-        logger.info("Scheduler stopped")
+        logger.debug(f"💤 Sleeping for {sleep_seconds}s...")
+        await asyncio.sleep(sleep_seconds)
