@@ -128,6 +128,55 @@ logger = logging.getLogger(__name__)
 # 📝 الوصف: خدمة الاتصال بقاعدة بيانات مونجو بشكل غير متزامن.
 # ==============================================================================
 
+def encode_mongo_credentials(uri: str) -> str:
+    """
+    Encode username and password in MongoDB URI according to RFC 3986.
+    This fixes the "Username and password must be escaped" error.
+    """
+    from urllib.parse import quote_plus
+    if not uri or "@" not in uri:
+        return uri
+    
+    try:
+        # Extract protocol (mongodb:// or mongodb+srv://)
+        if uri.startswith("mongodb+srv://"):
+            protocol = "mongodb+srv://"
+        elif uri.startswith("mongodb://"):
+            protocol = "mongodb://"
+        else:
+            return uri
+        
+        # Remove protocol
+        rest = uri[len(protocol):]
+        
+        # Split credentials from host
+        if "@" not in rest:
+            return uri
+        
+        credentials, host_and_rest = rest.split("@", 1)
+        
+        # Split username and password
+        if ":" in credentials:
+            username, password = credentials.split(":", 1)
+            # Encode both username and password
+            encoded_username = quote_plus(username)
+            encoded_password = quote_plus(password)
+            encoded_credentials = f"{encoded_username}:{encoded_password}"
+        else:
+            # Only username, no password
+            encoded_credentials = quote_plus(credentials)
+        
+        # Reconstruct URI
+        return f"{protocol}{encoded_credentials}@{host_and_rest}"
+    
+    except Exception as e:
+        logger.warning(f"Failed to encode credentials: {e}, using original URI")
+        return uri
+
+
+
+
+
 class Database:
     """
     Main Database Class (Singleton).
@@ -176,54 +225,6 @@ class Database:
             logger.info("✅ Database initialized and indexes verified (non-destructive).")
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {e}")
-
-def encode_mongo_credentials(uri: str) -> str:
-    """
-    Encode username and password in MongoDB URI according to RFC 3986.
-    This fixes the "Username and password must be escaped" error.
-    """
-    from urllib.parse import quote_plus
-    if not uri or "@" not in uri:
-        return uri
-    
-    try:
-        # Extract protocol (mongodb:// or mongodb+srv://)
-        if uri.startswith("mongodb+srv://"):
-            protocol = "mongodb+srv://"
-        elif uri.startswith("mongodb://"):
-            protocol = "mongodb://"
-        else:
-            return uri
-        
-        # Remove protocol
-        rest = uri[len(protocol):]
-        
-        # Split credentials from host
-        if "@" not in rest:
-            return uri
-        
-        credentials, host_and_rest = rest.split("@", 1)
-        
-        # Split username and password
-        if ":" in credentials:
-            username, password = credentials.split(":", 1)
-            # Encode both username and password
-            encoded_username = quote_plus(username)
-            encoded_password = quote_plus(password)
-            encoded_credentials = f"{encoded_username}:{encoded_password}"
-        else:
-            # Only username, no password
-            encoded_credentials = quote_plus(credentials)
-        
-        # Reconstruct URI
-        return f"{protocol}{encoded_credentials}@{host_and_rest}"
-    
-    except Exception as e:
-        logger.warning(f"Failed to encode credentials: {e}, using original URI")
-        return uri
-
-
-
 
     async def add_or_update_user(self, user_data: dict):
         """
