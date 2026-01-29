@@ -143,7 +143,11 @@ class Database:
         🔹 إنشاء الاتصال بقاعدة البيانات.
         """
         uri = get_mongo_uri()
-        uri = resolve_mongo_uri(uri) # Fix SRV issues
+        # First encode credentials
+        from urllib.parse import quote_plus
+        uri = encode_mongo_credentials(uri)
+        # Then resolve SRV
+        uri = resolve_mongo_uri(uri)
         db_name = get_mongo_db_name() or "Vex_db"
         logger.info(f"Connecting to MongoDB (db={db_name})...")
         try:
@@ -153,6 +157,52 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             raise e
+
+def encode_mongo_credentials(uri: str) -> str:
+    """
+    Encode username and password in MongoDB URI according to RFC 3986.
+    This fixes the "Username and password must be escaped" error.
+    """
+    from urllib.parse import quote_plus
+    if not uri or "@" not in uri:
+        return uri
+    
+    try:
+        # Extract protocol (mongodb:// or mongodb+srv://)
+        if uri.startswith("mongodb+srv://"):
+            protocol = "mongodb+srv://"
+        elif uri.startswith("mongodb://"):
+            protocol = "mongodb://"
+        else:
+            return uri
+        
+        # Remove protocol
+        rest = uri[len(protocol):]
+        
+        # Split credentials from host
+        if "@" not in rest:
+            return uri
+        
+        credentials, host_and_rest = rest.split("@", 1)
+        
+        # Split username and password
+        if ":" in credentials:
+            username, password = credentials.split(":", 1)
+            # Encode both username and password
+            encoded_username = quote_plus(username)
+            encoded_password = quote_plus(password)
+            encoded_credentials = f"{encoded_username}:{encoded_password}"
+        else:
+            # Only username, no password
+            encoded_credentials = quote_plus(credentials)
+        
+        # Reconstruct URI
+        return f"{protocol}{encoded_credentials}@{host_and_rest}"
+    
+    except Exception as e:
+        logger.warning(f"Failed to encode credentials: {e}, using original URI")
+        return uri
+
 
     async def init_database(self):
         """

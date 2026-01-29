@@ -5,6 +5,7 @@ from backend.database.local_db import get_system_config
 from motor.motor_asyncio import AsyncIOMotorClient
 import dns.resolver
 import logging
+from urllib.parse import quote_plus, urlparse
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -114,7 +115,10 @@ async def connect_mongo():
     config = get_system_config()
     if config.mongo_uri:
         try:
-            resolved_uri = resolve_mongo_uri(config.mongo_uri)
+            # First, encode credentials in the URI
+            encoded_uri = encode_mongo_credentials(config.mongo_uri)
+            # Then resolve SRV if needed
+            resolved_uri = resolve_mongo_uri(encoded_uri)
             client = AsyncIOMotorClient(resolved_uri)
             db_name = config.mongo_db_name or "Vex_db"
             db = client.get_default_database(db_name)
@@ -123,3 +127,48 @@ async def connect_mongo():
             print(f"✅ Backend Connected to Mongo: {db.name}")
         except Exception as e:
             print(f"❌ Backend Failed to Connect to Mongo: {e}")
+
+def encode_mongo_credentials(uri: str) -> str:
+    """
+    Encode username and password in MongoDB URI according to RFC 3986.
+    This fixes the "Username and password must be escaped" error.
+    """
+    if not uri or "@" not in uri:
+        return uri
+    
+    try:
+        # Extract protocol (mongodb:// or mongodb+srv://)
+        if uri.startswith("mongodb+srv://"):
+            protocol = "mongodb+srv://"
+        elif uri.startswith("mongodb://"):
+            protocol = "mongodb://"
+        else:
+            return uri
+        
+        # Remove protocol
+        rest = uri[len(protocol):]
+        
+        # Split credentials from host
+        if "@" not in rest:
+            return uri
+        
+        credentials, host_and_rest = rest.split("@", 1)
+        
+        # Split username and password
+        if ":" in credentials:
+            username, password = credentials.split(":", 1)
+            # Encode both username and password
+            encoded_username = quote_plus(username)
+            encoded_password = quote_plus(password)
+            encoded_credentials = f"{encoded_username}:{encoded_password}"
+        else:
+            # Only username, no password
+            encoded_credentials = quote_plus(credentials)
+        
+        # Reconstruct URI
+        return f"{protocol}{encoded_credentials}@{host_and_rest}"
+    
+    except Exception as e:
+        logger.warning(f"Failed to encode credentials: {e}, using original URI")
+        return uri
+
