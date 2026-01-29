@@ -13,8 +13,7 @@ services:
       - ./backend:/app/backend
       - ./data:/app/data
       - ./bot:/app/bot
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
+    # MongoDB URI configured via dashboard
     networks:
       - boter_network
     dns:
@@ -29,8 +28,7 @@ services:
     volumes:
       - ./bot:/app/bot
       - ./data:/app/data
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
+    # MongoDB URI configured via dashboard
     depends_on:
       - backend
     networks:
