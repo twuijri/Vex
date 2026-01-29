@@ -37,18 +37,15 @@ services:
       - 8.8.8.8
 
   frontend:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
     container_name: boter_frontend
     restart: always
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
     ports:
-      - "3000-3100:5173"
-    command: sh -c "npm install --legacy-peer-deps --verbose && npm run dev -- --host 0.0.0.0"
+      - "3000-3100:80"
     environment:
       - VITE_API_TARGET=http://backend:8000
-      - NODE_ENV=development
     networks:
       - boter_network
     depends_on:
