@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from backend.models.config import SystemConfig
 from backend.database.local_db import save_system_config, get_system_config
 import bcrypt
+import secrets
+import string
 
 # ==============================================================================
 # 📄 File: backend/routers/setup.py
@@ -55,3 +57,58 @@ async def get_status():
     """
     config = get_system_config()
     return {"setup_complete": config.is_setup_complete}
+
+@router.post("/api/reset-password")
+async def reset_password():
+    """
+    Reset admin password - generates random password and logs it.
+    🔹 إعادة تعيين كلمة مرور المدير - يولد كلمة مرور عشوائية ويسجلها في logs.
+    
+    Security: Only works if system is already setup.
+    الأمان: يعمل فقط إذا كان النظام معداً مسبقاً.
+    """
+    import datetime
+    
+    current = get_system_config()
+    if not current.is_setup_complete:
+        raise HTTPException(status_code=400, detail="النظام غير معد. استخدم /setup أولاً (System not setup yet).")
+    
+    # Generate random password | توليد كلمة مرور عشوائية
+    alphabet = string.ascii_letters + string.digits
+    random_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+    
+    # Hash the new password | تشفير كلمة المرور الجديدة
+    hashed = bcrypt.hashpw(random_password.encode('utf-8'), bcrypt.gensalt())
+    current.admin_password_hash = hashed.decode('utf-8')
+    
+    # Save updated config | حفظ الإعدادات المحدثة
+    save_system_config(current)
+    
+    # Log the password prominently | تسجيل كلمة المرور في logs بشكل واضح
+    log_message = f"""
+    ═══════════════════════════════════════════════════════════
+    🔐 PASSWORD RESET - إعادة تعيين كلمة المرور
+    ═══════════════════════════════════════════════════════════
+    Timestamp: {datetime.datetime.now()}
+    Username: {current.admin_username}
+    New Password: {random_password}
+    ═══════════════════════════════════════════════════════════
+    ⚠️  IMPORTANT: Save this password! It will not be shown again.
+    ⚠️  مهم: احفظ كلمة المرور! لن تظهر مرة أخرى.
+    ═══════════════════════════════════════════════════════════
+    """
+    
+    print(log_message)
+    
+    # Also save to file for easier retrieval | حفظ في ملف للوصول السهل
+    try:
+        with open("/app/data/password_reset.log", "a") as f:
+            f.write(log_message + "\n")
+    except Exception as e:
+        print(f"Could not write to password reset log file: {e}")
+    
+    return {
+        "status": "success",
+        "message": "تم إعادة تعيين كلمة المرور. راجع logs للحصول على كلمة المرور الجديدة (Password reset. Check container logs for new password).",
+        "username": current.admin_username
+    }

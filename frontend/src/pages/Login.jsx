@@ -52,6 +52,28 @@ const Login = () => {
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!window.confirm('⚠️ هل أنت متأكد من إعادة تعيين كلمة المرور؟\n\nستُولد كلمة مرور عشوائية جديدة وستظهر في logs الـ container.')) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await api.post('/api/reset-password');
+
+            toast.success('تم إعادة تعيين كلمة المرور!', { duration: 5000 });
+
+            // Show instructions
+            alert(`✅ تم إعادة تعيين كلمة المرور بنجاح!\n\n📋 للحصول على كلمة المرور الجديدة:\n\n1️⃣ في Portainer → Containers\n2️⃣ اضغط على boter_backend\n3️⃣ اختر Logs\n4️⃣ ابحث عن "PASSWORD RESET"\n5️⃣ انسخ كلمة المرور الجديدة\n\nاسم المستخدم: ${res.data.username}`);
+
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.detail || 'فشل إعادة تعيين كلمة المرور');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
             <Toaster position="top-center" />
@@ -92,9 +114,24 @@ const Login = () => {
                         {loading ? 'جاري التحقق...' : 'دخول'}
                     </button>
                 </form>
+
+                {/* Password Reset Button */}
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                    <button
+                        onClick={handleResetPassword}
+                        disabled={loading}
+                        className={`w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded transition ${loading ? 'opacity-50' : ''}`}
+                    >
+                        🔄 إعادة تعيين كلمة المرور
+                    </button>
+                    <p className="text-xs text-gray-400 mt-2 text-center">
+                        سيتم إنشاء كلمة مرور عشوائية وعرضها في logs
+                    </p>
+                </div>
             </div>
         </div>
     );
 };
 
 export default Login;
+
