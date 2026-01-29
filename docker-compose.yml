@@ -10,9 +10,7 @@ services:
     ports:
       - "8000-8100:8000"
     volumes:
-      - ./backend:/app/backend
-      - ./data:/app/data
-      - ./bot:/app/bot
+      - data:/app/data
     # MongoDB URI configured via dashboard
     networks:
       - boter_network
@@ -26,8 +24,7 @@ services:
     container_name: boter_bot
     restart: always
     volumes:
-      - ./bot:/app/bot
-      - ./data:/app/data
+      - data:/app/data
     # MongoDB URI configured via dashboard
     depends_on:
       - backend
@@ -54,3 +51,7 @@ services:
 networks:
   boter_network:
     driver: bridge
+
+volumes:
+  data:
+    driver: local
