@@ -158,6 +158,25 @@ class Database:
             logger.error(f"Failed to connect to MongoDB: {e}")
             raise e
 
+    async def init_database(self):
+        """
+        Initialize database collections and indexes.
+        🔹 تهيئة مجموعات قاعدة البيانات والفهارس.
+        """
+        try:
+            # 1. Groups Collection Index (non-destructive)
+            await self.db.groups.create_index("chat_id", unique=True)
+            
+            # 2. Users Collection Index
+            await self.db.users.create_index("id", unique=True)
+            
+            # 3. Support Logs Index
+            await self.db.support_logs.create_index("ticket_id", unique=True)
+            
+            logger.info("✅ Database initialized and indexes verified (non-destructive).")
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {e}")
+
 def encode_mongo_credentials(uri: str) -> str:
     """
     Encode username and password in MongoDB URI according to RFC 3986.
@@ -204,24 +223,7 @@ def encode_mongo_credentials(uri: str) -> str:
         return uri
 
 
-    async def init_database(self):
-        """
-        Initialize database collections and indexes.
-        🔹 تهيئة مجموعات قاعدة البيانات والفهارس.
-        """
-        try:
-            # 1. Groups Collection Index (non-destructive)
-            await self.db.groups.create_index("chat_id", unique=True)
-            
-            # 2. Users Collection Index
-            await self.db.users.create_index("id", unique=True)
-            
-            # 3. Support Logs Index
-            await self.db.support_logs.create_index("ticket_id", unique=True)
-            
-            logger.info("✅ Database initialized and indexes verified (non-destructive).")
-        except Exception as e:
-            logger.error(f"❌ Database initialization failed: {e}")
+
 
     async def add_or_update_user(self, user_data: dict):
         """
