@@ -1,57 +1,38 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
-    container_name: boter_backend
-    restart: always
+  app:
+    build: .
+    container_name: boter
+    restart: unless-stopped
     ports:
-      - "8000-8100:8000"
-    volumes:
-      - data:/app/data
-    # MongoDB URI configured via dashboard
-    networks:
-      - boter_network
-    dns:
-      - 8.8.8.8
-
-  bot:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.bot
-    container_name: boter_bot
-    restart: always
-    volumes:
-      - data:/app/data
-    # MongoDB URI configured via dashboard
-    depends_on:
-      - backend
-    networks:
-      - boter_network
-    dns:
-      - 8.8.8.8
-
-  frontend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.frontend
-    container_name: boter_frontend
-    restart: always
-    ports:
-      - "3000-3100:80"
+      - "8080:8080"
     environment:
-      - VITE_API_TARGET=http://backend:8000
-    networks:
-      - boter_network
+      - DATABASE_URL=postgresql+asyncpg://boter:boter_secret@db:5432/boter_db
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=8080
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
 
-networks:
-  boter_network:
-    driver: bridge
+  db:
+    image: postgres:16-alpine
+    container_name: boter_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=boter
+      - POSTGRES_PASSWORD=boter_secret
+      - POSTGRES_DB=boter_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boter -d boter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  data:
-    driver: local
+  postgres_data:
+  app_data:

@@ -1,29 +1,14 @@
-# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
+*.py[cod]
+*.egg-info/
+dist/
+build/
 .env
-
-# Node/Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.env
-frontend/.DS_Store
-
-# Mac
-.DS_Store
-
-# IDE
-.vscode/
-.idea/
-
-# Application Data
 data/
-backend/backend_debug.txt
-
-# Docker
-docker-compose.override.yml
+*.db
+.venv/
+venv/
+.idea/
+.vscode/
+*.session
+*.session-journal

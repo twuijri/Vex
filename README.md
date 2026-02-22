@@ -1,92 +1,52 @@
-# Vex 🤖
-**Advanced Telegram Group Management Bot with Dashboard**
-**بوت إدارة مجموعات تيليجرام متطور مع لوحة تحكم**
+# Vex — بوت إدارة القروبات v2.0
 
-[![Developer](https://img.shields.io/badge/Developer-@twuijri-blue)](https://github.com/twuijri)
-[![Docker](https://img.shields.io/badge/Docker-Ready-green)](https://www.docker.com/)
+بوت تيليقرام متكامل لإدارة المجموعات ومكافحة السبام مع لوحة تحكم ويب احترافية.
 
-## 📖 About / نبذة
-**Vex** is a powerful, open-source Telegram bot designed to manage groups efficiently. It features a modern web dashboard for easy configuration, real-time statistics, and advanced moderation tools.
-**Vex** هو بوت مفتوح المصدر لإدارة مجموعات تيليجرام بكفاءة عالية. يتميز بلوحة تحكم ويب عصرية لسهولة الإعداد، إحصائيات لحظية، وأدوات إشراف متقدمة.
-
----
-
-## ✨ Features / المميزات
-- 🛡️ **Group Protection**: Anti-spam, media filters, and banned words.
-- 📊 **Web Dashboard**: Google Material Design UI to manage settings.
-- 📈 **Real-time Stats**: Track active groups and messages.
-- 🔇 **Silent Mode**: Schedule group opening/closing times.
-- 📝 **Welcome Messages**: Customizable welcome texts with variables.
-- 🐳 **Dockerized**: Easy deployment with one command.
-
----
-
-## 🚀 Installation / التثبيت
-
-### Prerequisites / المتطلبات
-- Docker & Docker Compose
-- Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
-- MongoDB Connection String (Atlas or External)
-
-### Steps / الخطوات
-
-1. **Clone the repository / استنسخ المستودع**
-   ```bash
-   git clone https://github.com/twuijri/Vex.git
-   cd Vex
-   ```
-
-2. **Setup (لوحة الإعداد)**
-   شغّل النظام ثم افتح المتصفح على `http://localhost:3000` لإدخال:
-   - توكن البوت
-   - رابط MongoDB
-   - **اسم قاعدة البيانات (اختياري، الافتراضي: Vex_db)**
-   - بيانات دخول اللوحة
-
-3. **Run with Docker / التشغيل بواسطة دوكر**
-   ```bash
-   docker-compose up -d --build
-   ```
-
-4. **Access Dashboard / الدخول للوحة التحكم**
-   Open your browser:
-   افتح المتصفح:
-   `http://localhost:3000`
-
-    `http://localhost:3000`
-
-### ⚡ Quick Start (One Command)
-Run the entire system with a single command (Linux/Mac):
-تشغيل النظام بالكامل بأمر واحد:
+## 🚀 التشغيل السريع
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/twuijri/Vex/main/docker-compose.ghcr.yml && docker compose up -d
+docker-compose up -d
 ```
-*Note: After running, open `http://localhost:3000` to configure the Bot Token & Admin User via the Setup Wizard.*
-*ملاحظة: بعد التشغيل، افتح الرابط `http://localhost:3000` لإدخال التوكن وإعداد المشرف عبر المعالج التلقائي.*
 
----
+ثم افتح المتصفح على `http://localhost:8080` لإكمال الإعداد.
 
-## 🛠️ Configuration / الإعدادات
+## ✨ المميزات
 
-### Environment Variables (.env)
-| Variable | Description |
-|----------|-------------|
-| `BOT_TOKEN` | Telegram Bot Token from BotFather |
-| `MONGODB_URI` | Connection string (Default: `mongodb://mongodb:27017/boter_db`) |
-| `ADMIN_USERNAME` | Username for Dashboard Login |
-| `ADMIN_PASSWORD` | Password for Dashboard Login |
+| الميزة | الوصف |
+|--------|-------|
+| �� نظام التواصل | توجيه رسائل المستخدمين للمشرفين والرد عليهم |
+| 🛡 مكافحة السبام | فلاتر وسائط (20 نوع) + كلمات محظورة |
+| 🔒 قفل المجموعات | قفل يدوي + مؤقت + مجدول يومياً |
+| 🎊 ترحيب وقوانين | رسائل ترحيب + قوانين قابلة للتخصيص |
+| 🌐 لوحة تحكم ويب | إحصائيات + إدارة المجموعات والمستخدمين |
+| ⚙️ إعداد سهل | Setup Wizard بدون env variables |
 
----
+## 🛠 التقنيات
 
-## 🤝 Contributing / المساهمة
-Contributions are welcome! Please fork the repository and submit a pull request.
-نرحب بالمساهمات! يرجى عمل Fork للمستودع وإرسال Pull Request.
+- **Python 3.12** + python-telegram-bot v21
+- **PostgreSQL** + SQLAlchemy (async)
+- **FastAPI** + Jinja2 (لوحة الويب)
+- **Docker** + docker-compose
 
-## 👤 Developer / المطور
-**@twuijri**
-[GitHub Profile](https://github.com/twuijri)
+## 📁 هيكل المشروع
 
----
-*Built with Python (Aiogram), React (Vite), and MongoDB.*
-*تم بناؤه باستخدام Python و React و MongoDB.*
+```
+├── bot/          # البوت الرئيسي (handlers, services, filters)
+├── db/           # قاعدة البيانات (models, engine)
+├── web/          # لوحة التحكم (routes, templates, static)
+├── Dockerfile
+└── docker-compose.yml
+```
+
+## 🔧 الأوامر
+
+| الأمر | الوصف |
+|-------|-------|
+| `/start` | بدء البوت |
+| `#الاعدادات` | لوحة الإعدادات |
+| `#مجموعة_المشرفين` | تعيين قروب المشرفين |
+| `#حظر` | حظر مستخدم (رد على رسالته) |
+| `#الغاء_حظر` | إلغاء حظر مستخدم |
+| `#المشرفين` | عرض قائمة المشرفين |
+| `#اضافة_مشرف` | إضافة مشرف (رد على رسالته) |
+| `#القوانين` | عرض القوانين |
