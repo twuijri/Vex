@@ -34,15 +34,15 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_to = message.reply_to_message
     user_id = None
 
-    # Method 1: Check if the reply is to a forwarded message (has forward_from)
-    if reply_to.forward_from:
-        user_id = reply_to.forward_from.id
-    # Method 2: Check if forward_sender_name exists (privacy mode)
-    elif reply_to.forward_date:
-        # Look up from our tracking database
-        support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
-        if support_msg:
-            user_id = support_msg.user_telegram_id
+    # In API 7.0+, forward_from is replaced by forward_origin
+    if getattr(reply_to, "forward_origin", None):
+        if reply_to.forward_origin.type == "user":
+            user_id = reply_to.forward_origin.sender_user.id
+        else: # "hidden_user" or others
+            # Look up from our tracking database
+            support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
+            if support_msg:
+                user_id = support_msg.user_telegram_id
 
     if not user_id:
         return

@@ -34,14 +34,15 @@ async def block_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_id = None
     username = None
 
-    if reply_to.forward_from:
-        user_id = reply_to.forward_from.id
-        username = reply_to.forward_from.username or "❌"
-    elif reply_to.forward_date:
-        support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
-        if support_msg:
-            user_id = support_msg.user_telegram_id
-            username = "❌"
+    if getattr(reply_to, "forward_origin", None):
+        if reply_to.forward_origin.type == "user":
+            user_id = reply_to.forward_origin.sender_user.id
+            username = reply_to.forward_origin.sender_user.username or "❌"
+        else:
+            support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
+            if support_msg:
+                user_id = support_msg.user_telegram_id
+                username = "❌"
 
     if user_id:
         result = await block_user(user_id)
@@ -60,12 +61,13 @@ async def unblock_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
     reply_to = message.reply_to_message
     user_id = None
 
-    if reply_to.forward_from:
-        user_id = reply_to.forward_from.id
-    elif reply_to.forward_date:
-        support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
-        if support_msg:
-            user_id = support_msg.user_telegram_id
+    if getattr(reply_to, "forward_origin", None):
+        if reply_to.forward_origin.type == "user":
+            user_id = reply_to.forward_origin.sender_user.id
+        else:
+            support_msg = await get_support_message_by_admin_msg_id(reply_to.message_id)
+            if support_msg:
+                user_id = support_msg.user_telegram_id
 
     if user_id:
         result = await unblock_user(user_id)
