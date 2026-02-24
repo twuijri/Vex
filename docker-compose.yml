@@ -46,4 +46,4 @@ networks:
   default:
   npm_network:
     external: true
-    # name: nginx-proxy-manager_default # Change this to the exact name of your NPM network if it's different
+    name: ${NPM_NETWORK:-nginx-proxy-manager_default}
