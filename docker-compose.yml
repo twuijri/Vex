@@ -3,12 +3,12 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: boter
+    container_name: vex
     restart: unless-stopped
     ports:
       - "8089:8080"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://boter:boter_secret@db:5432/boter_db
+      - DATABASE_URL=postgresql+asyncpg://vex:vex_secret@db:5432/vex_db
       - WEB_HOST=0.0.0.0
       - WEB_PORT=8080
     depends_on:
@@ -19,16 +19,16 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: boter_db
+    container_name: vex_db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=boter
-      - POSTGRES_PASSWORD=boter_secret
-      - POSTGRES_DB=boter_db
+      - POSTGRES_USER=vex
+      - POSTGRES_PASSWORD=vex_secret
+      - POSTGRES_DB=vex_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U boter -d boter_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U vex -d vex_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
