@@ -11,7 +11,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://vex:vex_secret@db:5432/vex_db
       - WEB_HOST=0.0.0.0
       - WEB_PORT=8080
-      # - WEBHOOK_URL=https://your-domain.com # Uncomment and set to your domain to use Webhooks instead of Polling
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
     depends_on:
       db:
         condition: service_healthy
