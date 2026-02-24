@@ -17,6 +17,9 @@ services:
         condition: service_healthy
     volumes:
       - app_data:/app/data
+    networks:
+      - default
+      - npm_network
 
   db:
     image: postgres:16-alpine
@@ -37,3 +40,10 @@ services:
 volumes:
   postgres_data:
   app_data:
+
+
+networks:
+  default:
+  npm_network:
+    external: true
+    # name: nginx-proxy-manager_default # Change this to the exact name of your NPM network if it's different
