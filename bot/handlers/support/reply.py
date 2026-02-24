@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Reply Handler
+Vex - Reply Handler
 Handles admin replies to user messages in admin group
 """
 import logging
@@ -10,7 +10,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.admin_service import is_admin_group
 from bot.services.user_service import get_support_message_by_admin_msg_id
 
-logger = logging.getLogger("boter.handlers.support.reply")
+logger = logging.getLogger("vex.handlers.support.reply")
 
 
 async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):

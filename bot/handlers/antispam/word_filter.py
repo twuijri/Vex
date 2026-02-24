@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Word Filter Handler
+Vex - Word Filter Handler
 Checks messages for blocked words and deletes them
 """
 import logging
@@ -10,7 +10,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.group_service import is_managed_group, check_blocked_word
 from bot.services.admin_service import is_admin
 
-logger = logging.getLogger("boter.handlers.antispam.word_filter")
+logger = logging.getLogger("vex.handlers.antispam.word_filter")
 
 
 async def filter_blocked_words(update: Update, context: ContextTypes.DEFAULT_TYPE):

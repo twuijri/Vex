@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Rules Handler
+Vex - Rules Handler
 Group rules management
 """
 import logging
@@ -15,7 +15,7 @@ from bot.services.group_service import (
     get_managed_group,
 )
 
-logger = logging.getLogger("boter.handlers.antispam.rules")
+logger = logging.getLogger("vex.handlers.antispam.rules")
 
 EDITING_RULES = 1
 

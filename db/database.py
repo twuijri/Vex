@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Database Engine & Session Management
+Vex - Database Engine & Session Management
 Async SQLAlchemy setup for PostgreSQL
 """
 import os

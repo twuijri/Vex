@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Application Entry Point
+Vex - Application Entry Point
 Starts both the Telegram bot and the web dashboard
 """
 import asyncio
@@ -19,10 +19,10 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("boter.log", encoding="utf-8")
+        logging.FileHandler("vex.log", encoding="utf-8")
     ]
 )
-logger = logging.getLogger("boter")
+logger = logging.getLogger("vex")
 
 
 async def main():

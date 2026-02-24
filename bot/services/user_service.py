@@ -1,5 +1,5 @@
 """
-Boter 2.0 - User Service
+Vex - User Service
 Business logic for user management
 """
 import logging
@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 from db.database import get_db
 from db.models import User, SupportMessage
 
-logger = logging.getLogger("boter.services.user")
+logger = logging.getLogger("vex.services.user")
 
 
 async def register_user(

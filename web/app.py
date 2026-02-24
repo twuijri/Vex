@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Web Dashboard Application
+Vex - Web Dashboard Application
 FastAPI app with Setup Wizard and Admin Dashboard
 """
 import logging
@@ -12,14 +12,14 @@ from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse, Response
 from telegram import Update
 
-logger = logging.getLogger("boter.web")
+logger = logging.getLogger("vex.web")
 
 # Get absolute paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-app = FastAPI(title="Boter 2.0 Dashboard", docs_url=None, redoc_url=None)
+app = FastAPI(title="Vex Dashboard", docs_url=None, redoc_url=None)
 
 # Mount static files
 os.makedirs(STATIC_DIR, exist_ok=True)

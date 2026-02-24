@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Settings Handler
+Vex - Settings Handler
 Main settings menu accessed via #الاعدادات in admin group
 """
 import logging
@@ -16,7 +16,7 @@ from bot.services.group_service import (
     toggle_media_setting, get_group_media_setting,
 )
 
-logger = logging.getLogger("boter.handlers.admin.settings")
+logger = logging.getLogger("vex.handlers.admin.settings")
 
 # Media type labels in Arabic
 MEDIA_LABELS = {

@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Admin Service
+Vex - Admin Service
 Business logic for admin management
 """
 import logging
@@ -10,7 +10,7 @@ from sqlalchemy import select, delete, func
 from db.database import get_db
 from db.models import Admin, AdminGroup
 
-logger = logging.getLogger("boter.services.admin")
+logger = logging.getLogger("vex.services.admin")
 
 
 async def is_admin(telegram_id: int) -> bool:

@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Start Handler
+Vex - Start Handler
 Handles /start command in private and group chats
 """
 import logging
@@ -11,7 +11,7 @@ from bot.services.user_service import register_user
 from bot.services.admin_service import is_admin, get_admin_group_id, set_admin_group, get_admin_count, add_admin
 from bot.services.group_service import activate_group
 
-logger = logging.getLogger("boter.handlers.start")
+logger = logging.getLogger("vex.handlers.start")
 
 WELCOME_USER = "اهلا بك في البوت 😄\nأرسل رسالتك وسيتم توجيهها للمشرفين"
 WELCOME_ADMIN = "اهلا بك في لوحة التحكم 😄\nأرسل #الاعدادات للوصول للإعدادات"

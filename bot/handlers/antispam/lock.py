@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Lock Handler
+Vex - Lock Handler
 Group lock/unlock with timer and schedule support
 """
 import logging
@@ -18,7 +18,7 @@ from bot.services.group_service import (
 )
 from bot.services.admin_service import is_admin_group
 
-logger = logging.getLogger("boter.handlers.antispam.lock")
+logger = logging.getLogger("vex.handlers.antispam.lock")
 
 # Global scheduler
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")

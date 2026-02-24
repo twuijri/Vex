@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Welcome Handler
+Vex - Welcome Handler
 Welcome message for new group members
 """
 import logging
@@ -15,7 +15,7 @@ from bot.services.group_service import (
     toggle_welcome, get_managed_group,
 )
 
-logger = logging.getLogger("boter.handlers.antispam.welcome")
+logger = logging.getLogger("vex.handlers.antispam.welcome")
 
 # Conversation states
 EDITING_WELCOME = 1

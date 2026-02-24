@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Blocked Words Handler
+Vex - Blocked Words Handler
 Manage blocked words list and check incoming messages
 """
 import logging
@@ -15,7 +15,7 @@ from bot.services.group_service import (
 )
 from bot.services.admin_service import get_admin_group_id
 
-logger = logging.getLogger("boter.handlers.antispam.words")
+logger = logging.getLogger("vex.handlers.antispam.words")
 
 ADDING_WORD, REMOVING_WORD = range(2)
 

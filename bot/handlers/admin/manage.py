@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Admin Management Handler
+Vex - Admin Management Handler
 Add/remove/list bot admins
 """
 import logging
@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from bot.services.admin_service import add_admin, remove_admin, list_admins, is_admin
 
-logger = logging.getLogger("boter.handlers.admin.manage")
+logger = logging.getLogger("vex.handlers.admin.manage")
 
 
 async def add_admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

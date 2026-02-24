@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Forward Handler
+Vex - Forward Handler
 Forwards user messages from private chat to admin group
 """
 import logging
@@ -10,7 +10,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.admin_service import get_admin_group_id
 from bot.services.user_service import is_user_blocked, save_support_message, register_user
 
-logger = logging.getLogger("boter.handlers.support.forward")
+logger = logging.getLogger("vex.handlers.support.forward")
 
 
 async def forward_to_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):

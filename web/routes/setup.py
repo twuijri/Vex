@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Setup Wizard Routes
+Vex - Setup Wizard Routes
 First-time configuration via web interface
 """
 import logging
@@ -12,7 +12,7 @@ import httpx
 
 from bot.core.config import save_bot_config, load_bot_config
 
-logger = logging.getLogger("boter.web.setup")
+logger = logging.getLogger("vex.web.setup")
 
 router = APIRouter(prefix="/setup", tags=["Setup"])
 templates = Jinja2Templates(

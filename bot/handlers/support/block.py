@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Block Handler
+Vex - Block Handler
 Block/unblock users from messaging the bot
 """
 import logging
@@ -16,7 +16,7 @@ from bot.services.user_service import (
     unblock_all_users, get_support_message_by_admin_msg_id,
 )
 
-logger = logging.getLogger("boter.handlers.support.block")
+logger = logging.getLogger("vex.handlers.support.block")
 
 
 async def block_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

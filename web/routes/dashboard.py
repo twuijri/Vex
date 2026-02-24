@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Dashboard Routes
+Vex - Dashboard Routes
 Admin dashboard with stats and management
 """
 import logging
@@ -14,7 +14,7 @@ from bot.services.user_service import get_user_count, get_blocked_count, list_bl
 from bot.services.group_service import get_group_count, list_managed_groups
 from bot.services.admin_service import list_admins
 
-logger = logging.getLogger("boter.web.dashboard")
+logger = logging.getLogger("vex.web.dashboard")
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 templates = Jinja2Templates(
@@ -82,7 +82,7 @@ async def logs_page(request: Request):
         return RedirectResponse(url="/setup")
 
     log_content = "لا توجد سجلات بعد (لم يتم إنشاء ملف السجل)."
-    log_file = "boter.log"
+    log_file = "vex.log"
     if os.path.exists(log_file):
         try:
             with open(log_file, "r", encoding="utf-8") as f:

@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Media Filter Handler
+Vex - Media Filter Handler
 Single handler replaces 14 separate filter files from the original bot.
 Deletes messages containing blocked media types in managed groups.
 """
@@ -11,7 +11,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.group_service import is_managed_group, get_group_media_setting
 from bot.services.admin_service import is_admin
 
-logger = logging.getLogger("boter.handlers.antispam.media_filter")
+logger = logging.getLogger("vex.handlers.antispam.media_filter")
 
 
 async def _is_group_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:

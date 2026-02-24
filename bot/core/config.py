@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Configuration Loader
+Vex - Configuration Loader
 Loads bot config from database instead of env variables
 """
 import logging
@@ -10,7 +10,7 @@ from sqlalchemy import select
 from db.database import get_db
 from db.models import BotConfig
 
-logger = logging.getLogger("boter.config")
+logger = logging.getLogger("vex.config")
 
 
 async def load_bot_config() -> Optional[BotConfig]:

@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Bot Application Factory
+Vex - Bot Application Factory
 Creates and configures the python-telegram-bot Application
 """
 import logging
@@ -8,7 +8,7 @@ from telegram.ext import Application
 
 from db.models import BotConfig
 
-logger = logging.getLogger("boter.bot")
+logger = logging.getLogger("vex.bot")
 
 
 async def create_bot_application(config: BotConfig) -> Application:

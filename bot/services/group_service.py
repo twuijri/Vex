@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Group Service
+Vex - Group Service
 Business logic for managed group management
 """
 import logging
@@ -14,7 +14,7 @@ from db.models import (
     WelcomeConfig, RulesConfig,
 )
 
-logger = logging.getLogger("boter.services.group")
+logger = logging.getLogger("vex.services.group")
 
 
 # ─── Group CRUD ────────────────────────────────────────────────

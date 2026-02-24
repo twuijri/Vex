@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Custom Filters
+Vex - Custom Filters
 All Pyrogram filters consolidated into one file using python-telegram-bot filters
 """
 import logging
@@ -12,7 +12,7 @@ from bot.services.admin_service import is_admin, get_admin_group_id
 from bot.services.user_service import is_user_blocked
 from bot.services.group_service import get_group_media_setting, is_managed_group
 
-logger = logging.getLogger("boter.filters")
+logger = logging.getLogger("vex.filters")
 
 
 class IsAdminFilter(filters.MessageFilter):

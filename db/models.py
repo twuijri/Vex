@@ -1,5 +1,5 @@
 """
-Boter 2.0 - Database Models
+Vex - Database Models
 SQLAlchemy models for PostgreSQL
 """
 from datetime import datetime
