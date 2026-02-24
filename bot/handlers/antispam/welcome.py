@@ -121,8 +121,7 @@ async def toggle_welcome_callback(update: Update, context: ContextTypes.DEFAULT_
     group_id = int(query.data.split("#")[1])
     await toggle_welcome(group_id)
 
-    # Re-render
-    query.data = f"welcome_settings#{group_id}"
+    # Re-show welcome settings (without modifying query.data)
     await welcome_settings_callback(update, context)
 
 

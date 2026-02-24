@@ -27,10 +27,15 @@ scheduler.start()
 # Permission labels
 PERM_LABELS = {
     "can_send_messages": "✉️ إرسال الرسائل",
-    "can_send_media_messages": "🎆 إرسال الوسائط",
-    "can_send_other_messages": "🖼 الملصقات والصور المتحركة",
+    "can_send_audios": "🎵 الصوتيات",
+    "can_send_documents": "📄 الملفات",
+    "can_send_photos": "🖼 الصور",
+    "can_send_videos": "🎥 الفيديو",
+    "can_send_video_notes": "📹 الملاحظات المرئية",
+    "can_send_voice_notes": "🎙 البصمات الصوتية",
+    "can_send_other_messages": "🖼 الملصقات والمتحركة",
     "can_send_polls": "📊 الاستفتاءات",
-    "can_add_web_page_previews": "🔍 معاينة الروابط",
+    "can_add_web_page_previews": "🔍 الروابط",
     "can_change_info": "📝 تغيير معلومات المجموعة",
     "can_invite_users": "👥 إضافة الأعضاء",
     "can_pin_messages": "📌 تثبيت الرسائل",
@@ -55,7 +60,12 @@ async def open_group(bot, chat_id, message_text=None):
             chat_id,
             ChatPermissions(
                 can_send_messages=perms.get("can_send_messages", True),
-                can_send_media_messages=perms.get("can_send_media_messages", True),
+                can_send_audios=perms.get("can_send_audios", True),
+                can_send_documents=perms.get("can_send_documents", True),
+                can_send_photos=perms.get("can_send_photos", True),
+                can_send_videos=perms.get("can_send_videos", True),
+                can_send_video_notes=perms.get("can_send_video_notes", True),
+                can_send_voice_notes=perms.get("can_send_voice_notes", True),
                 can_send_other_messages=perms.get("can_send_other_messages", True),
                 can_send_polls=perms.get("can_send_polls", True),
                 can_add_web_page_previews=perms.get("can_add_web_page_previews", True),
@@ -128,8 +138,7 @@ async def toggle_lock_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         else:
             await close_group(context.bot, group_id)
 
-        # Re-show lock settings
-        query.data = f"lock_settings#{group_id}"
+        # Re-show lock settings (without modifying query.data)
         await lock_settings_callback(update, context)
     except Exception as e:
         logger.error(f"Error toggling lock: {e}")
@@ -174,8 +183,7 @@ async def toggle_perm_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
     await toggle_permission_setting(group_id, perm_type)
 
-    # Re-render permissions
-    query.data = f"perm_settings#{group_id}"
+    # Re-render permissions (without modifying query.data)
     await perm_settings_callback(update, context)
 
 

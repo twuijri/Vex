@@ -95,7 +95,7 @@ async def toggle_rules_callback(update: Update, context: ContextTypes.DEFAULT_TY
     group_id = int(query.data.split("#")[1])
     await toggle_rules(group_id)
 
-    query.data = f"rules_settings#{group_id}"
+    # Re-show rules settings (without modifying query.data)
     await rules_settings_callback(update, context)
 
 
