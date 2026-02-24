@@ -8,7 +8,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from bot.services.user_service import register_user
-from bot.services.admin_service import is_admin, get_admin_group_id, set_admin_group
+from bot.services.admin_service import is_admin, get_admin_group_id, set_admin_group, get_admin_count, add_admin
 from bot.services.group_service import activate_group
 
 logger = logging.getLogger("boter.handlers.start")
@@ -30,6 +30,19 @@ async def start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_name=user.last_name,
         username=user.username,
     )
+
+    # Claim ownership if no admins exist
+    if await get_admin_count() == 0:
+        await add_admin(
+            telegram_id=user.id,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            username=user.username,
+            is_super=True,
+        )
+        await update.message.reply_text("👑 **تم تسجيلك كمالك للبوت (Super Admin)!**\nيمكنك الآن إرسال #الاعدادات في المجموعة.", parse_mode="Markdown")
+        await update.message.reply_text(WELCOME_ADMIN, parse_mode="Markdown")
+        return
 
     # Check if admin
     if await is_admin(user.id):

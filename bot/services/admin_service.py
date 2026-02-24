@@ -5,7 +5,7 @@ Business logic for admin management
 import logging
 from typing import Optional, List
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 
 from db.database import get_db
 from db.models import Admin, AdminGroup
@@ -20,6 +20,13 @@ async def is_admin(telegram_id: int) -> bool:
             select(Admin).where(Admin.telegram_id == telegram_id)
         )
         return result.scalar_one_or_none() is not None
+
+
+async def get_admin_count() -> int:
+    """Get the number of bot admins"""
+    async with get_db() as session:
+        result = await session.execute(select(func.count(Admin.id)))
+        return result.scalar() or 0
 
 
 async def add_admin(
