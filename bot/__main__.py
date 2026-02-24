@@ -17,6 +17,10 @@ from web.app import start_web_server
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("boter.log", encoding="utf-8")
+    ]
 )
 logger = logging.getLogger("boter")
 

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Boter 2.0 — سجلات النظام{% endblock %}
+
+{% block head %}
+<style>
+    .log-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        height: 70vh;
+    }
+
+    .log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .log-viewer {
+        background: #1e1e2e;
+        color: #cdd6f4;
+        font-family: monospace;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-y: auto;
+        flex-grow: 1;
+        white-space: pre-wrap;
+        word-break: break-all;
+        direction: ltr;
+        text-align: left;
+    }
+
+    .btn-refresh {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: opacity 0.2s;
+    }
+
+    .btn-refresh:hover {
+        opacity: 0.9;
+    }
+</style>
+<script>
+    function scrollToBottom() {
+        const viewer = document.getElementById('log-viewer');
+        viewer.scrollTop = viewer.scrollHeight;
+    }
+    window.onload = scrollToBottom;
+</script>
+{% endblock %}
+
+{% block nav %}
+<nav class="navbar">
+    <div class="nav-brand">
+        <span class="nav-logo">🤖</span>
+        <span class="nav-title">Boter 2.0</span>
+        <span class="nav-badge">@{{ bot_username }}</span>
+    </div>
+    <div class="nav-links">
+        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
+        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
+        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
+        <a href="/dashboard/logs" class="nav-link active">📑 السجلات</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="log-container">
+        <div class="log-header">
+            <h1 class="page-title" style="margin: 0; font-size: 1.5rem;">📑 سجلات النظام (Logs)</h1>
+            <a href="/dashboard/logs" class="btn-refresh">🔄 تحديث</a>
+        </div>
+
+        <div class="log-viewer" id="log-viewer">{{ logs }}</div>
+    </div>
+</div>
+{% endblock %}

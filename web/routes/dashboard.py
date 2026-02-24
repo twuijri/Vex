@@ -72,3 +72,28 @@ async def users_page(request: Request):
         "blocked_users": blocked,
         "bot_username": config.bot_username,
     })
+
+
+@router.get("/logs", response_class=HTMLResponse)
+async def logs_page(request: Request):
+    """View bot application logs"""
+    config = await load_bot_config()
+    if not config or not config.is_setup_complete:
+        return RedirectResponse(url="/setup")
+
+    log_content = "لا توجد سجلات بعد (لم يتم إنشاء ملف السجل)."
+    log_file = "boter.log"
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                # Read last 1000 lines for performance
+                lines = f.readlines()
+                log_content = "".join(lines[-1000:])
+        except Exception as e:
+            log_content = f"خطأ في قراءة السجل: {e}"
+
+    return templates.TemplateResponse("logs.html", {
+        "request": request,
+        "bot_username": config.bot_username,
+        "logs": log_content,
+    })
