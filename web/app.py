@@ -9,7 +9,8 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
+from telegram import Update
 
 logger = logging.getLogger("boter.web")
 
@@ -54,6 +55,23 @@ async def root():
     if config and config.is_setup_complete:
         return RedirectResponse(url="/dashboard")
     return RedirectResponse(url="/setup")
+
+
+@app.post("/telegram-update")
+async def telegram_webhook(request: Request):
+    """Receive Telegram updates via Webhook"""
+    global _bot_app
+    if not _bot_app:
+        return Response(status_code=503, content="Bot application is not running yet")
+        
+    try:
+        data = await request.json()
+        update = Update.de_json(data=data, bot=_bot_app.bot)
+        await _bot_app.update_queue.put(update)
+        return Response(status_code=200, content="OK")
+    except Exception as e:
+        logger.error(f"Error processing webhook update: {e}")
+        return Response(status_code=500, content="Internal Server Error")
 
 
 async def start_web_server(bot_app=None):

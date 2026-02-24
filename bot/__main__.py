@@ -42,12 +42,24 @@ async def main():
             start_web_server(bot_app=app)
         )
 
+        webhook_url = os.getenv("WEBHOOK_URL")
+
         # Start bot
         logger.info(f"🤖 Starting bot @{config.bot_username}...")
         async with app:
             await app.start()
-            await app.updater.start_polling(drop_pending_updates=True)
-            logger.info("🚀 Bot is running!")
+            
+            if webhook_url:
+                # Webhook Mode
+                logger.info(f"🔗 Starting in Webhook mode. URL: {webhook_url}/telegram-update")
+                await app.bot.set_webhook(url=f"{webhook_url}/telegram-update", drop_pending_updates=True)
+                logger.info("🚀 Bot is running (Webhooks enabled)!")
+            else:
+                # Polling Mode
+                logger.info("📡 Starting in Polling mode (No WEBHOOK_URL found)")
+                await app.bot.delete_webhook(drop_pending_updates=True)
+                await app.updater.start_polling(drop_pending_updates=True)
+                logger.info("🚀 Bot is running (Polling)!")
 
             # Wait until interrupted
             try:
@@ -55,7 +67,8 @@ async def main():
             except asyncio.CancelledError:
                 pass
             finally:
-                await app.updater.stop()
+                if not webhook_url:
+                    await app.updater.stop()
                 await app.stop()
     else:
         # 3b. Setup not complete → start only web dashboard (setup wizard)
