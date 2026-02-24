@@ -5,7 +5,7 @@ Handles /start command in private and group chats
 import logging
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from bot.services.user_service import register_user
 from bot.services.admin_service import is_admin, get_admin_group_id, set_admin_group
@@ -103,8 +103,8 @@ def register_start_handlers(app: Application):
     app.add_handler(CommandHandler("start", start_private, filters=~_group_filter()))
     app.add_handler(CommandHandler("start", start_group, filters=_group_filter()))
     app.add_handler(
-        CommandHandler(
-            ["مجموعة_المشرفين", "set_admin_group"],
+        MessageHandler(
+            filters.Regex(r"^[/#]?(مجموعة_المشرفين|set_admin_group)(?:@\S+)?(?:\s|$)"),
             set_admin_group_command,
         )
     )

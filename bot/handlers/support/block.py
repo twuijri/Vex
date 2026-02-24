@@ -7,7 +7,7 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
-    ContextTypes, filters,
+    ContextTypes, filters, MessageHandler
 )
 
 from bot.services.admin_service import is_admin_group
@@ -117,7 +117,7 @@ async def unblock_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def register_block_handlers(app: Application):
     """Register block-related handlers"""
-    app.add_handler(CommandHandler(["حظر", "block"], block_user_command))
-    app.add_handler(CommandHandler(["الغاء_حظر", "unblock"], unblock_user_command))
-    app.add_handler(CommandHandler(["المحظورين", "blocked"], show_blocked_users))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(حظر|block)(?:@\S+)?(?:\s|$)"), block_user_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(الغاء_حظر|unblock)(?:@\S+)?(?:\s|$)"), unblock_user_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(المحظورين|blocked)(?:@\S+)?(?:\s|$)"), show_blocked_users))
     app.add_handler(CallbackQueryHandler(unblock_callback, pattern=r"^unblock"))

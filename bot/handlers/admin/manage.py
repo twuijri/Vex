@@ -5,7 +5,7 @@ Add/remove/list bot admins
 import logging
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from bot.services.admin_service import add_admin, remove_admin, list_admins, is_admin
 
@@ -77,6 +77,6 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 def register_admin_handlers(app: Application):
     """Register admin management handlers"""
-    app.add_handler(CommandHandler(["اضافة_مشرف", "add_admin"], add_admin_command))
-    app.add_handler(CommandHandler(["ازالة_مشرف", "remove_admin"], remove_admin_command))
-    app.add_handler(CommandHandler(["المشرفين", "admins"], list_admins_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(اضافة_مشرف|add_admin)(?:@\S+)?(?:\s|$)"), add_admin_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(ازالة_مشرف|remove_admin)(?:@\S+)?(?:\s|$)"), remove_admin_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(المشرفين|admins)(?:@\S+)?(?:\s|$)"), list_admins_command))

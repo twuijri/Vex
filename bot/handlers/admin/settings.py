@@ -7,7 +7,7 @@ import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
-    ContextTypes,
+    ContextTypes, MessageHandler, filters
 )
 
 from bot.services.admin_service import is_admin, is_admin_group
@@ -255,7 +255,7 @@ async def noop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def register_settings_handlers(app: Application):
     """Register settings handlers"""
-    app.add_handler(CommandHandler(["الاعدادات", "settings"], settings_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(الاعدادات|settings)(?:@\S+)?(?:\s|$)"), settings_command))
     app.add_handler(CallbackQueryHandler(settings_groups_callback, pattern=r"^settings_groups$"))
     app.add_handler(CallbackQueryHandler(group_settings_callback, pattern=r"^group_settings#"))
     app.add_handler(CallbackQueryHandler(media_settings_callback, pattern=r"^media_settings#"))

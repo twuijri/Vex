@@ -124,7 +124,7 @@ async def save_rules_message(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 def register_rules_handlers(app: Application):
     """Register rules handlers"""
-    app.add_handler(CommandHandler(["القوانين", "rules"], show_rules_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(القوانين|rules)(?:@\S+)?(?:\s|$)"), show_rules_command))
     app.add_handler(CallbackQueryHandler(rules_settings_callback, pattern=r"^rules_settings#"))
     app.add_handler(CallbackQueryHandler(show_rules_callback, pattern=r"^show_rules#"))
     app.add_handler(CallbackQueryHandler(toggle_rules_callback, pattern=r"^toggle_rules#"))
