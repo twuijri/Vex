@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Boter 2.0 — تم الإعداد بنجاح{% endblock %}
+
+{% block content %}
+<div class="setup-wrapper">
+    <div class="setup-card">
+        <div class="setup-header">
+            <div class="logo success-logo">✅</div>
+            <h1>تم الإعداد بنجاح!</h1>
+            <p class="subtitle">البوت <strong>@{{ bot_username }}</strong> جاهز للعمل</p>
+        </div>
+
+        <div class="success-steps">
+            <h3>الخطوات التالية:</h3>
+            <ol>
+                <li>أعد تشغيل الحاوية (Docker) لبدء البوت</li>
+                <li>أضف البوت لمجموعة المشرفين</li>
+                <li>أرسل <code>#مجموعة_المشرفين</code> في المجموعة</li>
+                <li>أضف البوت للمجموعات المراد إدارتها</li>
+            </ol>
+        </div>
+
+        <div class="restart-notice">
+            <p>⚠️ يرجى إعادة تشغيل الحاوية:</p>
+            <code class="code-block">docker-compose restart</code>
+        </div>
+    </div>
+</div>
+{% endblock %}

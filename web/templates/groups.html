@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Boter 2.0 — المجموعات{% endblock %}
+
+{% block nav %}
+<nav class="navbar">
+    <div class="nav-brand">
+        <span class="nav-logo">🤖</span>
+        <span class="nav-title">Boter 2.0</span>
+        <span class="nav-badge">@{{ bot_username }}</span>
+    </div>
+    <div class="nav-links">
+        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
+        <a href="/dashboard/groups" class="nav-link active">👥 المجموعات</a>
+        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">👥 المجموعات المُدارة</h1>
+
+    {% if groups %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>اسم المجموعة</th>
+                    <th>معرف المجموعة</th>
+                    <th>نوع المجموعة</th>
+                    <th>الحالة</th>
+                    <th>تاريخ التفعيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for group in groups %}
+                <tr>
+                    <td><strong>{{ group.group_name }}</strong></td>
+                    <td class="mono">{{ group.telegram_group_id }}</td>
+                    <td>{{ group.group_type or "—" }}</td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if group.is_active else 'danger' }}">
+                            {{ "مفعل" if group.is_active else "معطل" }}
+                        </span>
+                    </td>
+                    <td>{{ group.activated_at.strftime('%Y-%m-%d') if group.activated_at else "—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>لا يوجد مجموعات مفعلة</h3>
+        <p>أضف البوت لمجموعة واستخدم الأمر لتفعيلها</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

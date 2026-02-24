@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Boter 2.0 — لوحة التحكم{% endblock %}
+
+{% block nav %}
+<nav class="navbar">
+    <div class="nav-brand">
+        <span class="nav-logo">🤖</span>
+        <span class="nav-title">Boter 2.0</span>
+        <span class="nav-badge">@{{ bot_username }}</span>
+    </div>
+    <div class="nav-links">
+        <a href="/dashboard/" class="nav-link active">📊 لوحة التحكم</a>
+        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
+        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">📊 لوحة التحكم</h1>
+
+    <div class="stats-grid">
+        <div class="stat-card stat-users">
+            <div class="stat-icon">👤</div>
+            <div class="stat-info">
+                <div class="stat-value">{{ user_count }}</div>
+                <div class="stat-label">المستخدمين</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-groups">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <div class="stat-value">{{ group_count }}</div>
+                <div class="stat-label">المجموعات المُدارة</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-blocked">
+            <div class="stat-icon">🚫</div>
+            <div class="stat-info">
+                <div class="stat-value">{{ blocked_count }}</div>
+                <div class="stat-label">المحظورين</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <h2>⚡ إجراءات سريعة</h2>
+        <div class="actions-grid">
+            <a href="/dashboard/groups" class="action-card">
+                <span class="action-icon">📋</span>
+                <span class="action-label">إدارة المجموعات</span>
+            </a>
+            <a href="/dashboard/users" class="action-card">
+                <span class="action-icon">🚫</span>
+                <span class="action-label">المحظورين</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
