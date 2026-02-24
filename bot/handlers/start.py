@@ -111,6 +111,44 @@ async def set_admin_group_command(update: Update, context: ContextTypes.DEFAULT_
     await update.message.reply_text(result, parse_mode="Markdown")
 
 
+async def activate_group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle #تفعيل or /تفعيل
+    Activates the bot in the current group
+    """
+    user = update.effective_user
+    chat = update.effective_chat
+    if not user or not chat:
+        return
+
+    if chat.type == "private":
+        await update.message.reply_text("⚠️ هذا الأمر يعمل فقط في المجموعات")
+        return
+
+    if not await is_admin(user.id):
+        return
+
+    result = await activate_group(
+        telegram_group_id=chat.id,
+        group_name=chat.title or "Unknown",
+        group_type=str(chat.type),
+        activated_by=user.id,
+    )
+
+    # Notify admin group
+    admin_group_id = await get_admin_group_id()
+    if admin_group_id:
+        try:
+            await context.bot.send_message(
+                admin_group_id, f"**{result}**\n📎 {chat.title}",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+    await update.message.reply_text(result, parse_mode="Markdown")
+
+
 def register_start_handlers(app: Application):
     """Register start-related handlers"""
     app.add_handler(CommandHandler("start", start_private, filters=~_group_filter()))
@@ -119,6 +157,12 @@ def register_start_handlers(app: Application):
         MessageHandler(
             filters.Regex(r"^[/#]?(مجموعة_المشرفين|set_admin_group)(?:@\S+)?(?:\s|$)"),
             set_admin_group_command,
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            filters.Regex(r"^[/#]?(تفعيل|activate)(?:@\S+)?(?:\s|$)"),
+            activate_group_command,
         )
     )
 
