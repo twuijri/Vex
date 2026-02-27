@@ -17,6 +17,16 @@ from db.models import (
 logger = logging.getLogger("vex.services.group")
 
 
+async def get_group_by_id(group_db_id: int):
+    """Return a ManagedGroup row by its DB primary key."""
+    async with get_db() as session:
+        result = await session.execute(
+            select(ManagedGroup).where(ManagedGroup.id == group_db_id)
+        )
+        return result.scalar_one_or_none()
+
+
+
 # ─── Group CRUD ────────────────────────────────────────────────
 
 async def activate_group(
@@ -254,6 +264,31 @@ async def list_blocked_words(telegram_group_id: int) -> List[str]:
         if group:
             return [bw.word for bw in group.blocked_words if bw.is_active]
         return []
+
+
+async def list_blocked_words_with_ids(group_db_id: int) -> List[dict]:
+    """Return blocked words with their DB IDs — used by the web dashboard."""
+    async with get_db() as session:
+        result = await session.execute(
+            select(BlockedWord)
+            .where(BlockedWord.group_id == group_db_id, BlockedWord.is_active == True)
+            .order_by(BlockedWord.word)
+        )
+        rows = result.scalars().all()
+        return [{"id": bw.id, "word": bw.word} for bw in rows]
+
+
+async def delete_blocked_word_by_id(word_id: int) -> bool:
+    """Delete a blocked word by its DB primary key. Returns True if deleted."""
+    async with get_db() as session:
+        result = await session.execute(
+            select(BlockedWord).where(BlockedWord.id == word_id)
+        )
+        bw = result.scalar_one_or_none()
+        if bw:
+            await session.delete(bw)
+            return True
+        return False
 
 
 async def clear_blocked_words(telegram_group_id: int) -> str:

@@ -33,6 +33,7 @@
                     <th>نوع المجموعة</th>
                     <th>الحالة</th>
                     <th>تاريخ التفعيل</th>
+                    <th>الكلمات المحظورة</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,6 +48,12 @@
                         </span>
                     </td>
                     <td>{{ group.activated_at.strftime('%Y-%m-%d') if group.activated_at else "—" }}</td>
+                    <td>
+                        <a href="/dashboard/groups/{{ group.id }}/words"
+                            style="color:var(--primary-color);font-weight:600;text-decoration:none;">
+                            🚫 إدارة الكلمات
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

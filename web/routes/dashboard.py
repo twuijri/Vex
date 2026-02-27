@@ -11,7 +11,11 @@ import os
 
 from bot.core.config import load_bot_config
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
-from bot.services.group_service import get_group_count, list_managed_groups
+from bot.services.group_service import (
+    get_group_count, list_managed_groups,
+    list_blocked_words_with_ids, delete_blocked_word_by_id,
+    add_blocked_word, get_group_by_id,
+)
 from bot.services.admin_service import list_admins
 from bot.services.ai_service import get_provider_stats
 from bot.services.ai_provider_service import (
@@ -208,3 +212,50 @@ async def ai_providers_move(provider_id: int, direction: str = Form(...)):
     """Move a provider up or down in the cascade order"""
     await move_provider(provider_id, direction)
     return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
+
+
+# ── Per-Group Blocked Words Management ───────────────────────────────────────
+
+@router.get("/groups/{group_id}/words", response_class=HTMLResponse)
+async def group_words_page(request: Request, group_id: int, msg: str = ""):
+    """Show and manage blocked words for a specific group"""
+    config = await load_bot_config()
+    if not config or not config.is_setup_complete:
+        return RedirectResponse(url="/setup")
+
+    group = await get_group_by_id(group_id)
+    if not group:
+        return RedirectResponse(url="/dashboard/groups")
+
+    words = await list_blocked_words_with_ids(group_id)
+    return templates.TemplateResponse("group_words.html", {
+        "request": request,
+        "bot_username": config.bot_username,
+        "group": group,
+        "words": words,
+        "msg": msg,
+    })
+
+
+@router.post("/groups/{group_id}/words/add")
+async def group_words_add(group_id: int, word: str = Form(...)):
+    """Add a blocked word to the group (duplicate-safe)"""
+    group = await get_group_by_id(group_id)
+    if not group:
+        return RedirectResponse(url="/dashboard/groups", status_code=303)
+
+    result_msg = await add_blocked_word(group.telegram_group_id, word.strip())
+    return RedirectResponse(
+        url=f"/dashboard/groups/{group_id}/words?msg={result_msg}",
+        status_code=303,
+    )
+
+
+@router.post("/groups/{group_id}/words/{word_id}/delete")
+async def group_words_delete(group_id: int, word_id: int):
+    """Delete a blocked word by its DB id"""
+    await delete_blocked_word_by_id(word_id)
+    return RedirectResponse(
+        url=f"/dashboard/groups/{group_id}/words",
+        status_code=303,
+    )
