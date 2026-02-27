@@ -132,7 +132,7 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
     import openai
     client = openai.AsyncOpenAI(
         api_key=api_key,
-        base_url="https://api.blackbox.ai/api/v1",
+        base_url="https://api.blackbox.ai",  # Correct base URL (no /api/v1)
     )
     prompt = (
         "You are an Arabic content moderation system for Telegram groups. "
@@ -268,7 +268,7 @@ async def get_provider_stats(days: int = 30) -> list[dict]:
         result = await session.execute(
             select(AIProviderStat)
             .where(AIProviderStat.stat_date >= cutoff)
-            .order_by(AIProviderStat.provider_key, AIProviderStat.stat_date.desc())
+            .order_by(AIProviderStat.stat_date.desc(), AIProviderStat.last_used_at.desc())
         )
         rows = result.scalars().all()
 
