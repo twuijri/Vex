@@ -240,3 +240,22 @@ class AIProviderStat(Base):
     last_status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class AIProvider(Base):
+    """AI provider entries managed from the web dashboard"""
+    __tablename__ = "ai_providers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Human-readable label, e.g. 'Gemini Key 1'
+    name: Mapped[str] = mapped_column(String(100))
+    # Provider type: 'google_studio' | 'blackbox' | 'huggingface'
+    provider_type: Mapped[str] = mapped_column(String(30))
+    # API key
+    api_key: Mapped[str] = mapped_column(Text)
+    # Model name, e.g. 'gemini-1.5-flash', 'gpt-4o', 'aubmindlab/bert-base-arabertv02'
+    model: Mapped[str] = mapped_column(String(200))
+    # Lower number = tried first
+    priority: Mapped[int] = mapped_column(Integer, default=10)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

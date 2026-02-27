@@ -1,50 +1,44 @@
 """
 Vex - AI Provider Service
-Multi-key cascade: Gemini API keys (1→2→3) → HuggingFace fallback.
+Dynamic, DB-driven AI cascade.
+Reads providers from database (ordered by priority), tries them in order.
 
-Smart logic:
-- If a key hit its DAILY quota → skip it entirely until tomorrow
-- If a key hit only MINUTE rate limit → try next key immediately
-- Tracks all requests in DB for dashboard reporting
+Supported provider types:
+  - google_studio  → Google AI Studio (Gemini models)
+  - blackbox       → Blackbox.ai (OpenAI-compatible endpoint)
+  - huggingface    → Hugging Face Inference API (zero-shot classification)
 """
 import logging
-import os
 from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import select, and_
 
 from db.database import get_db
-from db.models import AIProviderStat
+from db.models import AIProviderStat, AIProvider
 
 logger = logging.getLogger("vex.services.ai")
 
-# ─── AI Config ────────────────────────────────────────────────────────────────
-GEMINI_KEYS: list[str] = [
-    k for k in [
-        os.getenv("GEMINI_KEY_1"),
-        os.getenv("GEMINI_KEY_2"),
-        os.getenv("GEMINI_KEY_3"),
-    ] if k  # only include keys that are actually set
-]
-HUGGINGFACE_KEY: Optional[str] = os.getenv("HUGGINGFACE_KEY")
-HF_MODEL: str = os.getenv("HF_MODEL", "aubmindlab/bert-base-arabertv02")
+# Daily quota safety limits per type
+DAILY_LIMITS: dict[str, int] = {
+    "google_studio": 1450,
+    "blackbox": 99999,      # No known hard limit; use credit balance
+    "huggingface": 99999,   # No hard daily limit
+}
 
-DAILY_QUOTA_LIMIT: int = 1450  # Use 1450 as safe buffer below the 1500/day limit
-AI_SCORE_THRESHOLD: float = 0.80
-
-# Keywords detected in error messages indicating daily quota exhaustion
+# Keywords that indicate DAILY quota exhaustion (not just per-minute rate limit)
 DAILY_EXHAUSTION_KEYWORDS = [
     "quota exceeded",
     "daily quota",
     "resource has been exhausted",
+    "insufficient_quota",
+    "you exceeded your current quota",
 ]
 
 
-# ─── DB Helpers ───────────────────────────────────────────────────────────────
+# ─── DB Stats Helpers ─────────────────────────────────────────────────────────
 
 async def _get_or_create_stat(session, provider_key: str, today: date) -> AIProviderStat:
-    """Get or create today's stat row for a provider."""
     result = await session.execute(
         select(AIProviderStat).where(
             and_(
@@ -66,7 +60,6 @@ async def _get_or_create_stat(session, provider_key: str, today: date) -> AIProv
 
 
 async def _record_usage(provider_key: str, status: str, error: Optional[str] = None):
-    """Increment request counter and record status for a provider."""
     today = date.today()
     async with get_db() as session:
         stat = await _get_or_create_stat(session, provider_key, today)
@@ -76,8 +69,7 @@ async def _record_usage(provider_key: str, status: str, error: Optional[str] = N
         stat.last_used_at = datetime.utcnow()
 
 
-async def _is_daily_quota_exhausted(provider_key: str) -> bool:
-    """Return True if today's count has reached the daily safe limit."""
+async def _is_daily_quota_exhausted(provider_key: str, daily_limit: int) -> bool:
     today = date.today()
     async with get_db() as session:
         result = await session.execute(
@@ -91,146 +83,153 @@ async def _is_daily_quota_exhausted(provider_key: str) -> bool:
         stat = result.scalar_one_or_none()
         if not stat:
             return False
-        # Also checks if last call resulted in a daily exhaustion error
         if stat.last_status == "rate_limit_day":
             return True
-        return stat.requests_count >= DAILY_QUOTA_LIMIT
+        return stat.requests_count >= daily_limit
 
 
-# ─── Gemini Caller ────────────────────────────────────────────────────────────
+# ─── Provider Callers ─────────────────────────────────────────────────────────
 
-async def _call_gemini(api_key: str, text: str) -> float:
-    """
-    Call Gemini API to classify text as abusive.
-    Returns float 0.0–1.0 or raises an exception on failure.
-    """
+async def _call_google_studio(api_key: str, model: str, text: str) -> float:
+    """Call Google AI Studio (Gemini) API."""
     import google.generativeai as genai
-
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    gemini_model = genai.GenerativeModel(model or "gemini-1.5-flash")
 
     prompt = (
         "أنت نظام كشف المحتوى المسيء في مجموعات التيليجرام. "
         "قيّم الرسالة التالية على مقياس من 0.0 إلى 1.0 حيث:\n"
         "- 0.0 = رسالة طبيعية تماماً\n"
-        "- 1.0 = رسالة مسيئة جداً أو تحرش أو شتم\n\n"
-        "الرسالة: «{}»\n\n"
+        "- 1.0 = رسالة مسيئة جداً (شتم، تحرش، محتوى ضار)\n\n"
+        f"الرسالة: «{text[:500]}»\n\n"
         "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
-    ).format(text[:500])
-
-    response = await model.generate_content_async(prompt)
+    )
+    response = await gemini_model.generate_content_async(prompt)
     raw = response.text.strip().replace(",", ".")
-
-    # Parse the numeric score
-    score = float(raw.split()[0])
-    return max(0.0, min(1.0, score))
+    return max(0.0, min(1.0, float(raw.split()[0])))
 
 
-# ─── HuggingFace Caller ───────────────────────────────────────────────────────
+async def _call_blackbox(api_key: str, model: str, text: str) -> float:
+    """Call Blackbox.ai (OpenAI-compatible endpoint)."""
+    import openai
+    client = openai.AsyncOpenAI(
+        api_key=api_key,
+        base_url="https://api.blackbox.ai/api/v1",
+    )
+    prompt = (
+        "You are an Arabic content moderation system for Telegram groups. "
+        "Rate the following message on a scale from 0.0 to 1.0 where:\n"
+        "- 0.0 = completely normal message\n"
+        "- 1.0 = highly abusive (insults, harassment, harmful content)\n\n"
+        f"Message: «{text[:500]}»\n\n"
+        "Reply with ONLY a decimal number between 0.0 and 1.0, nothing else."
+    )
+    response = await client.chat.completions.create(
+        model=model or "blackboxai",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=10,
+    )
+    raw = response.choices[0].message.content.strip().replace(",", ".")
+    return max(0.0, min(1.0, float(raw.split()[0])))
 
-async def _call_huggingface(text: str) -> float:
-    """
-    Call HuggingFace Inference API using a zero-shot classifier.
-    Returns float 0.0–1.0 representing abuse probability.
-    """
+
+async def _call_huggingface(api_key: str, model: str, text: str) -> float:
+    """Call HuggingFace Inference API with zero-shot classification."""
     import httpx
-
-    if not HUGGINGFACE_KEY:
-        raise RuntimeError("HUGGINGFACE_KEY not set")
-
-    url = f"https://api-inference.huggingface.co/models/facebook/bart-large-mnli"
-    headers = {"Authorization": f"Bearer {HUGGINGFACE_KEY}"}
+    url = f"https://api-inference.huggingface.co/models/{model}"
+    headers = {"Authorization": f"Bearer {api_key}"}
     payload = {
         "inputs": text[:1000],
         "parameters": {
             "candidate_labels": ["رسالة عادية", "رسالة مسيئة أو شتم أو تحرش"]
-        }
+        },
     }
-
     async with httpx.AsyncClient(timeout=25.0) as client:
         resp = await client.post(url, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()
 
-    # data = {"labels": [...], "scores": [...]}
     labels = data.get("labels", [])
     scores = data.get("scores", [])
-    if "رسالة مسيئة أو شتم أو تحرش" in labels:
-        idx = labels.index("رسالة مسيئة أو شتم أو تحرش")
-        return float(scores[idx])
+    target = "رسالة مسيئة أو شتم أو تحرش"
+    if target in labels:
+        return float(scores[labels.index(target)])
     return 0.0
 
 
-# ─── Public Entry Point ───────────────────────────────────────────────────────
+# ─── Dispatch caller by type ──────────────────────────────────────────────────
+
+async def _call_provider(provider: AIProvider, text: str) -> float:
+    if provider.provider_type == "google_studio":
+        return await _call_google_studio(provider.api_key, provider.model, text)
+    elif provider.provider_type == "blackbox":
+        return await _call_blackbox(provider.api_key, provider.model, text)
+    elif provider.provider_type == "huggingface":
+        return await _call_huggingface(provider.api_key, provider.model, text)
+    raise ValueError(f"Unknown provider type: {provider.provider_type}")
+
+
+# ─── Main Public Entry Point ──────────────────────────────────────────────────
 
 async def analyze_text(text: str) -> float:
     """
-    Run the full AI cascade:
-    Gemini Key 1 → Gemini Key 2 → Gemini Key 3 → HuggingFace → 0.0 (skip)
-
-    Returns a float 0.0–1.0 representing the abuse probability.
+    Run the full AI cascade using providers stored in the database.
+    Returns a float 0.0–1.0 representing abuse probability.
+    If all providers fail/exhausted, returns 0.0.
     """
-    # ── Gemini Keys ──────────────────────────────────────────────────────────
-    for idx, key in enumerate(GEMINI_KEYS, start=1):
-        provider_name = f"gemini_{idx}"
+    # Load all active providers sorted by priority
+    async with get_db() as session:
+        result = await session.execute(
+            select(AIProvider)
+            .where(AIProvider.is_active == True)
+            .order_by(AIProvider.priority)
+        )
+        providers = list(result.scalars().all())
 
-        # Skip if today's quota is already exhausted
-        if await _is_daily_quota_exhausted(provider_name):
-            logger.info(f"[AI] {provider_name} daily quota exhausted, skipping.")
+    if not providers:
+        logger.warning("[AI] No active providers configured.")
+        return 0.0
+
+    for provider in providers:
+        key_label = f"{provider.provider_type}:{provider.id}:{provider.name}"
+        daily_limit = DAILY_LIMITS.get(provider.provider_type, 99999)
+
+        # Skip if today's daily quota exhausted
+        if await _is_daily_quota_exhausted(key_label, daily_limit):
+            logger.info(f"[AI] '{provider.name}' daily quota exhausted, skipping.")
             continue
 
         try:
-            score = await _call_gemini(key, text)
-            await _record_usage(provider_name, "ok")
-            logger.info(f"[AI] {provider_name} → score={score:.2f}")
+            score = await _call_provider(provider, text)
+            await _record_usage(key_label, "ok")
+            logger.info(f"[AI] '{provider.name}' → score={score:.2f}")
             return score
 
         except Exception as e:
             err_str = str(e).lower()
 
-            # Detect daily quota error
             if any(kw in err_str for kw in DAILY_EXHAUSTION_KEYWORDS):
-                logger.warning(f"[AI] {provider_name} daily quota hit. Marking exhausted.")
-                await _record_usage(provider_name, "rate_limit_day", str(e))
-                continue  # Try next key
-
-            # Detect minute rate limit (try next key)
-            if "429" in err_str or "rate" in err_str:
-                logger.warning(f"[AI] {provider_name} minute rate limit. Trying next.")
-                await _record_usage(provider_name, "rate_limit_minute", str(e))
+                logger.warning(f"[AI] '{provider.name}' daily quota hit.")
+                await _record_usage(key_label, "rate_limit_day", str(e))
                 continue
 
-            # Other errors (network, invalid key, etc.)
-            logger.error(f"[AI] {provider_name} error: {e}")
-            await _record_usage(provider_name, "error", str(e))
-            continue  # Try next key
+            if "429" in err_str or "rate" in err_str:
+                logger.warning(f"[AI] '{provider.name}' minute rate limit, trying next.")
+                await _record_usage(key_label, "rate_limit_minute", str(e))
+                continue
 
-    # ── HuggingFace Fallback ─────────────────────────────────────────────────
-    if HUGGINGFACE_KEY:
-        if not await _is_daily_quota_exhausted("huggingface"):
-            try:
-                score = await _call_huggingface(text)
-                await _record_usage("huggingface", "ok")
-                logger.info(f"[AI] huggingface → score={score:.2f}")
-                return score
-            except Exception as e:
-                err_str = str(e).lower()
-                status = "rate_limit_day" if "quota" in err_str else "error"
-                logger.error(f"[AI] huggingface error: {e}")
-                await _record_usage("huggingface", status, str(e))
+            logger.error(f"[AI] '{provider.name}' error: {e}")
+            await _record_usage(key_label, "error", str(e))
+            continue
 
-    # ── All providers failed/exhausted ───────────────────────────────────────
-    logger.warning("[AI] All AI providers failed or exhausted. Returning 0.0.")
+    logger.warning("[AI] All providers exhausted or failed. Returning 0.0.")
     return 0.0
 
 
-# ─── Dashboard Data Helper ────────────────────────────────────────────────────
+# ─── Dashboard Stats Helper ───────────────────────────────────────────────────
 
 async def get_provider_stats(days: int = 30) -> list[dict]:
-    """
-    Return usage stats for all providers for the last N days.
-    Returns list of dicts for the dashboard template.
-    """
+    """Return usage stats for all providers for the last N days."""
     from datetime import timedelta
     cutoff = date.today() - timedelta(days=days)
 

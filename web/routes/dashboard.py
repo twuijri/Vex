@@ -4,7 +4,7 @@ Admin dashboard with stats and management
 """
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import os
@@ -14,6 +14,9 @@ from bot.services.user_service import get_user_count, get_blocked_count, list_bl
 from bot.services.group_service import get_group_count, list_managed_groups
 from bot.services.admin_service import list_admins
 from bot.services.ai_service import get_provider_stats
+from bot.services.ai_provider_service import (
+    list_providers, add_provider, delete_provider, toggle_provider, move_provider,
+)
 
 logger = logging.getLogger("vex.web.dashboard")
 
@@ -147,3 +150,61 @@ async def ai_stats_page(request: Request):
         "stats": stats,
         "summaries": summaries,
     })
+
+
+# ── AI Provider Management ────────────────────────────────────────────────────
+
+@router.get("/ai-providers", response_class=HTMLResponse)
+async def ai_providers_page(request: Request):
+    """AI provider management page"""
+    config = await load_bot_config()
+    if not config or not config.is_setup_complete:
+        return RedirectResponse(url="/setup")
+
+    providers = await list_providers()
+    return templates.TemplateResponse("ai_providers.html", {
+        "request": request,
+        "bot_username": config.bot_username,
+        "providers": providers,
+    })
+
+
+@router.post("/ai-providers/add")
+async def ai_providers_add(
+    request: Request,
+    name: str = Form(...),
+    provider_type: str = Form(...),
+    api_key: str = Form(...),
+    model: str = Form(...),
+    priority: int = Form(10),
+):
+    """Add a new AI provider"""
+    await add_provider(
+        name=name,
+        provider_type=provider_type,
+        api_key=api_key,
+        model=model,
+        priority=priority,
+    )
+    return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
+
+
+@router.post("/ai-providers/{provider_id}/delete")
+async def ai_providers_delete(provider_id: int):
+    """Delete an AI provider"""
+    await delete_provider(provider_id)
+    return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
+
+
+@router.post("/ai-providers/{provider_id}/toggle")
+async def ai_providers_toggle(provider_id: int):
+    """Toggle an AI provider active/inactive"""
+    await toggle_provider(provider_id)
+    return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
+
+
+@router.post("/ai-providers/{provider_id}/move")
+async def ai_providers_move(provider_id: int, direction: str = Form(...)):
+    """Move a provider up or down in the cascade order"""
+    await move_provider(provider_id, direction)
+    return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
