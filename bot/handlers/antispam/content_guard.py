@@ -12,10 +12,24 @@ from bot.services.ai_service import analyze_text as ai_analyze_text
 logger = logging.getLogger("vex.handlers.antispam.content_guard")
 
 # ─── Global Fallback Blacklist ────────────────────────────────────────────────
-# These are always checked regardless of per-group settings
+# Hardcoded globally prohibited words — always deleted regardless of group settings.
+# These go through Layer 1 normalization before matching, so variations are caught.
 GLOBAL_BLACKLIST: list[str] = [
-    # Add globally prohibited words here (slurs, etc.)
-    # Example: "كلمة_سيئة",
+    # إهانات وشتائم شائعة
+    "حيوان",
+    "كلب",
+    "خنزير",
+    "حمار",
+    "غبي",
+    "احمق",
+    "تافه",
+    "يلعن",
+    "ابن الكلب",
+    "يا كلب",
+    "يا حمار",
+    "يا حيوان",
+    "يا غبي",
+    # Add more words as needed
 ]
 
 

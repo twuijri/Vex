@@ -27,12 +27,30 @@ DAILY_LIMITS: dict[str, int] = {
 }
 
 # Keywords that indicate DAILY quota exhaustion (not just per-minute rate limit)
+# These MUST be very specific to avoid false positives from invalid keys or network errors
 DAILY_EXHAUSTION_KEYWORDS = [
-    "quota exceeded",
+    "quota exceeded for the day",
+    "daily request quota",
     "daily quota",
-    "resource has been exhausted",
-    "insufficient_quota",
     "you exceeded your current quota",
+    "insufficient_quota",
+]
+
+# Only treat as daily exhaustion if ALSO contains one of these (double check)
+DAILY_EXHAUSTION_CONFIRM = [
+    "quota",
+    "1500",
+    "exceeded",
+]
+
+# Keywords for temporary (per-minute) rate limiting
+MINUTE_RATE_KEYWORDS = ["429", "rate_limit", "rate limit", "too many requests"]
+
+# Keywords for permanent errors (wrong key, region blocked, etc.) — do NOT skip until tomorrow
+PERMANENT_ERROR_KEYWORDS = [
+    "api_key_invalid", "invalid api key", "api key not valid",
+    "permission_denied", "api_key_invalid",
+    "not_found", "404",
 ]
 
 
@@ -208,17 +226,30 @@ async def analyze_text(text: str) -> float:
         except Exception as e:
             err_str = str(e).lower()
 
-            if any(kw in err_str for kw in DAILY_EXHAUSTION_KEYWORDS):
+            # Permanent errors (wrong key, region blocked) → mark as error, try next
+            if any(kw in err_str for kw in PERMANENT_ERROR_KEYWORDS):
+                logger.error(f"[AI] '{provider.name}' permanent error (bad key?): {e}")
+                await _record_usage(key_label, "error", f"[PERMANENT] {e}")
+                continue
+
+            # Daily quota exhausted → skip until tomorrow
+            is_daily = (
+                any(kw in err_str for kw in DAILY_EXHAUSTION_KEYWORDS)
+                and any(kw in err_str for kw in DAILY_EXHAUSTION_CONFIRM)
+            )
+            if is_daily:
                 logger.warning(f"[AI] '{provider.name}' daily quota hit.")
                 await _record_usage(key_label, "rate_limit_day", str(e))
                 continue
 
-            if "429" in err_str or "rate" in err_str:
+            # Per-minute rate limit → try next key immediately
+            if any(kw in err_str for kw in MINUTE_RATE_KEYWORDS):
                 logger.warning(f"[AI] '{provider.name}' minute rate limit, trying next.")
                 await _record_usage(key_label, "rate_limit_minute", str(e))
                 continue
 
-            logger.error(f"[AI] '{provider.name}' error: {e}")
+            # Unknown error → log but try next
+            logger.error(f"[AI] '{provider.name}' unknown error: {e}")
             await _record_usage(key_label, "error", str(e))
             continue
 
