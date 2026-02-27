@@ -1,213 +1,56 @@
 {% extends "base.html" %}
-
 {% block title %}Vex — إحصائيات الذكاء الاصطناعي{% endblock %}
-
-{% block head %}
-<style>
-    .ai-stats-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .ai-stats-table th {
-        background: var(--bg-hover);
-        padding: 0.85rem 1rem;
-        text-align: right;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .ai-stats-table td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 0.95rem;
-    }
-
-    .ai-stats-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .ai-stats-table tr:hover td {
-        background: var(--bg-hover);
-    }
-
-    /* Status badges */
-    .badge {
-        display: inline-block;
-        padding: 0.2rem 0.65rem;
-        border-radius: 99px;
-        font-size: 0.78rem;
-        font-weight: 600;
-    }
-
-    .badge-ok {
-        background: #16a34a22;
-        color: #4ade80;
-    }
-
-    .badge-ratelimit {
-        background: #d9770622;
-        color: #fb923c;
-    }
-
-    .badge-error {
-        background: #dc262622;
-        color: #f87171;
-    }
-
-    .badge-day {
-        background: #7c3aed22;
-        color: #a78bfa;
-    }
-
-    /* Summary cards */
-    .provider-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .provider-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
-    }
-
-    .provider-card .p-name {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-bottom: 0.4rem;
-    }
-
-    .provider-card .p-count {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        line-height: 1;
-    }
-
-    .provider-card .p-sub {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        margin-top: 0.3rem;
-    }
-
-    /* Bar strip */
-    .usage-bar-wrap {
-        height: 6px;
-        background: var(--bg-hover);
-        border-radius: 99px;
-        margin-top: 0.6rem;
-        overflow: hidden;
-    }
-
-    .usage-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        border-radius: 99px;
-        transition: width 0.5s ease;
-    }
-</style>
-{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link active">🤖 الذكاء الاصطناعي</a>
-    </div>
-</nav>
-{% endblock %}
+{% block page_title %}📈 إحصائيات الذكاء الاصطناعي{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">🤖 إحصائيات الذكاء الاصطناعي — آخر 30 يوم</h1>
+<div class="page-header">
+    <h1 class="page-title">إحصائيات الذكاء الاصطناعي</h1>
+    <p class="page-subtitle">أداء كل مزود وعدد الطلبات</p>
+</div>
 
-    {% if not summaries %}
-    <div class="empty-state">
-        <div class="empty-icon">🌙</div>
-        <div class="empty-text">لا توجد بيانات بعد — ستظهر الإحصائيات بعد أول رسالة يحللها الذكاء الاصطناعي.</div>
-    </div>
-    {% else %}
-
-    <!-- Summary Cards -->
-    <div class="provider-summary">
-        {% for s in summaries %}
-        <div class="provider-card">
-            <div class="p-name">{{ s.label }}</div>
-            <div class="p-count">{{ s.total }}</div>
-            <div class="p-sub">طلب في آخر 30 يوم</div>
-            {% if s.limit %}
-            <div class="usage-bar-wrap">
-                <div class="usage-bar" style="width: {{ [s.today_pct, 100]|min }}%"></div>
-            </div>
-            <div class="p-sub">اليوم: {{ s.today }} / {{ s.limit }}</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Detailed Table -->
-    <div class="log-container" style="height: auto;">
-        <div class="log-header">
-            <strong>📋 سجل التفصيلي</strong>
-            <a href="/dashboard/ai-stats" class="btn-refresh">🔄 تحديث</a>
-        </div>
-        <table class="ai-stats-table">
+{% if stats %}
+<div class="card" style="padding:0;">
+    <div class="table-wrap">
+        <table class="table">
             <thead>
                 <tr>
-                    <th>المزوّد</th>
-                    <th>التاريخ</th>
-                    <th>طلبات</th>
-                    <th>الحالة</th>
-                    <th>آخر استخدام</th>
-                    <th>رسالة الخطأ الكاملة</th>
+                    <th>المزود</th>
+                    <th>النموذج</th>
+                    <th>الطلبات</th>
+                    <th>النجاح</th>
+                    <th>الفشل</th>
+                    <th>متوسط النتيجة</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                {% for row in stats %}
+                {% for s in stats %}
                 <tr>
-                    <td><strong>{{ row.provider }}</strong></td>
-                    <td>{{ row.date }}</td>
-                    <td>{{ row.requests }}</td>
                     <td>
-                        {% if row.status == 'ok' %}
-                        <span class="badge badge-ok">✅ ناجح</span>
-                        {% elif row.status == 'rate_limit_minute' %}
-                        <span class="badge badge-ratelimit">⏳ حد الدقيقة</span>
-                        {% elif row.status == 'rate_limit_day' %}
-                        <span class="badge badge-day">🚫 حد اليوم</span>
-                        {% elif row.status == 'error' %}
-                        <span class="badge badge-error">❌ خطأ</span>
-                        {% else %}
-                        <span class="badge">{{ row.status }}</span>
-                        {% endif %}
+                        <span class="badge badge-navy">{{ s.provider_type }}</span>
                     </td>
-                    <td>{{ row.last_used }}</td>
-                    <td style="font-size:0.75rem;color:var(--text-secondary);max-width:300px;word-break:break-all;">
-                        {{ row.error or '—' }}
+                    <td style="font-size:0.83rem;color:var(--text-muted);direction:ltr;text-align:left;">{{ s.model }}
+                    </td>
+                    <td><strong>{{ s.total_calls }}</strong></td>
+                    <td><span class="badge badge-success">{{ s.success_calls }}</span></td>
+                    <td><span class="badge badge-danger">{{ s.error_calls }}</span></td>
+                    <td>
+                        {% if s.avg_score is not none %}
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <div style="width:80px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+                                <div
+                                    style="width:{{ (s.avg_score * 100)|int }}%;height:100%;background:{% if s.avg_score > 0.65 %}var(--danger){% elif s.avg_score > 0.4 %}var(--warning){% else %}var(--success){% endif %};border-radius:3px;">
+                                </div>
+                            </div>
+                            <span style="font-size:0.8rem;font-weight:700;">{{ '%.0f'|format(s.avg_score * 100)
+                                }}%</span>
+                        </div>
+                        {% else %}—{% endif %}
                     </td>
                     <td>
-                        <form method="post" action="/dashboard/ai-stats/{{ row.id }}/delete">
-                            <button style="background:none;border:none;cursor:pointer;font-size:1rem;color:#f87171;"
-                                title="حذف" onclick="return confirm('حذف هذا السجل؟')">🗑️</button>
+                        <form method="post" action="/dashboard/ai-stats/delete/{{ s.id }}"
+                            onsubmit="return confirm('حذف السجل؟')">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
                         </form>
                     </td>
                 </tr>
@@ -215,6 +58,13 @@
             </tbody>
         </table>
     </div>
-    {% endif %}
 </div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📈</div>
+        <div class="empty-state-text">لا توجد إحصائيات بعد — ابعث رسائل للبوت ليبدأ التحليل</div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

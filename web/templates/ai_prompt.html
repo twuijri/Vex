@@ -1,241 +1,94 @@
 {% extends "base.html" %}
-
-{% block title %}Vex — محرر برومبت الذكاء الاصطناعي{% endblock %}
-
-{% block head %}
-<style>
-    .prompt-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .prompt-textarea {
-        width: 100%;
-        min-height: 220px;
-        background: var(--bg-hover);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        color: var(--text-primary);
-        font-family: 'Courier New', monospace;
-        font-size: 0.9rem;
-        padding: 1rem;
-        outline: none;
-        resize: vertical;
-        direction: ltr;
-        box-sizing: border-box;
-        transition: border-color 0.2s;
-    }
-
-    .prompt-textarea:focus {
-        border-color: var(--primary-color);
-    }
-
-    .btn-save {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.65rem 1.5rem;
-        font-family: inherit;
-        font-size: 1rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: opacity 0.2s;
-    }
-
-    .btn-save:hover {
-        opacity: 0.9;
-    }
-
-    .btn-reset {
-        background: #dc262622;
-        color: #f87171;
-        border: 1px solid #f8717133;
-        border-radius: 8px;
-        padding: 0.65rem 1.2rem;
-        font-family: inherit;
-        font-size: 0.95rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: opacity 0.2s;
-    }
-
-    .btn-reset:hover {
-        opacity: 0.8;
-    }
-
-    .hint-box {
-        background: #6366f111;
-        border: 1px solid #6366f144;
-        border-radius: 8px;
-        padding: 0.85rem 1rem;
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-bottom: 1rem;
-        direction: rtl;
-    }
-
-    .hint-box code {
-        background: #ffffff15;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        font-family: monospace;
-        color: #a5b4fc;
-    }
-
-    .disabled-note {
-        background: #f8717122;
-        border: 1px solid #f8717144;
-        border-radius: 8px;
-        padding: 0.85rem 1rem;
-        font-size: 0.9rem;
-        color: #f87171;
-        margin-bottom: 1.5rem;
-        text-align: center;
-        font-weight: 600;
-    }
-
-    .flash {
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-
-    .flash-ok {
-        background: #16a34a22;
-        color: #4ade80;
-    }
-</style>
-{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link">📈 الإحصائيات</a>
-        <a href="/dashboard/ai-providers" class="nav-link">🤖 مزودو الذكاء الاصطناعي</a>
-        <a href="/dashboard/ai-prompt" class="nav-link active">✏️ برومبت الذكاء الاصطناعي</a>
-    </div>
-</nav>
-{% endblock %}
+{% block title %}Vex — محرر البرومبت{% endblock %}
+{% block page_title %}✏️ محرر برومبت الذكاء الاصطناعي{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">✏️ محرر برومبت الذكاء الاصطناعي</h1>
-    <p style="color:var(--text-secondary);margin-bottom:1.5rem;">
-        يُرسَل هذا البرومبت مع كل رسالة يحللها الذكاء الاصطناعي. يجب أن يحتوي على <code
-            style="background:#ffffff15;padding:0.1rem 0.4rem;border-radius:4px;color:#a5b4fc;">{text}</code> حيث تُوضع
-        الرسالة.
+<div class="page-header">
+    <h1 class="page-title">محرر البرومبت</h1>
+    <p class="page-subtitle">خصّص تعليمات الذكاء الاصطناعي لتحليل الرسائل</p>
+</div>
+
+{% if not has_providers %}
+<div class="alert alert-warning">
+    ⚠️ لا يمكن تعديل البرومبت حتى تُضيف مزود ذكاء اصطناعي.
+    <a href="/dashboard/ai-providers" style="color:inherit;font-weight:700;"> إضافة مزود →</a>
+</div>
+{% endif %}
+
+{% if msg %}
+<div class="alert alert-success">{{ msg }}</div>
+{% endif %}
+
+<!-- Prompt Editor -->
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📝 تعليماتك (البرومبت
+        الحالي)</h2>
+    <div class="hint-box">
+        💡 اكتب <strong>تعليماتك فقط</strong> — البوت يُضيف <u>تلقائياً</u> في النهاية:
+        الرسالة + طلب الرقم بين 0.0-1.0
+    </div>
+    <form method="post" action="/dashboard/ai-prompt/save">
+        <textarea class="textarea-field" name="prompt" {% if not has_providers %}disabled{% endif
+            %}>{{ current_prompt }}</textarea>
+        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary" {% if not has_providers %}disabled{% endif %}>💾 حفظ
+                البرومبت</button>
+            <form method="post" action="/dashboard/ai-prompt/reset" style="margin:0;">
+                <button type="submit" class="btn btn-danger" {% if not has_providers %}disabled{% endif %}
+                    onclick="return confirm('إعادة الضبط إلى الافتراضي؟')">
+                    ♻️ إعادة الضبط
+                </button>
+            </form>
+        </div>
+    </form>
+</div>
+
+<!-- Fixed Suffix -->
+<div class="card" style="margin-bottom:1rem;border-color:var(--secondary);">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📋 يُضاف تلقائياً بعد
+        تعليماتك (ثابت)</h2>
+    <div class="suffix-box">الرسالة: «[نص الرسالة]»
+        أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر.</div>
+    <p style="color:var(--text-muted);font-size:0.78rem;margin-top:0.5rem;">هذه الأسطر تُضاف دائماً — لا تكتبها في
+        تعليماتك.</p>
+</div>
+
+<!-- Default Reference -->
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📋 التعليمات الافتراضية
+        (للرجوع إليها)</h2>
+    <pre
+        style="background:var(--bg);border-radius:10px;padding:1rem;font-size:0.8rem;direction:ltr;overflow-x:auto;color:var(--text-muted);">{{ default_prompt }}</pre>
+</div>
+
+<!-- Debug Channel -->
+<div class="card" style="border-color:{% if debug_channel_id %}var(--success){% else %}var(--border){% endif %};">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">🔬 قناة التتبع (Debug
+        Channel)</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+        البوت يُرسل لهذه القناة نتيجة كل تحليل: الرسالة + النتيجة + الإجراء.
     </p>
 
-    {% if not has_providers %}
-    <div class="disabled-note">
-        ⚠️ لا يمكن تفعيل هذه الميزة — لم تُضف أي مزود ذكاء اصطناعي بعد.
-        <br><a href="/dashboard/ai-providers" style="color:#f87171;">أضف مزوداً من هنا →</a>
-    </div>
+    {% if debug_channel_id %}
+    <div class="debug-active">✅ مُفعَّلة — معرف القناة: <code>{{ debug_channel_id }}</code></div>
     {% endif %}
 
-    {% if msg %}
-    <div class="flash flash-ok">{{ msg }}</div>
+    <form method="post" action="/dashboard/ai-prompt/debug-channel/save"
+        style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;">
+        <input class="input" type="text" name="channel_id" value="{{ debug_channel_id or '' }}"
+            placeholder="مثال: -100123456789" style="flex:1;min-width:200px;direction:ltr;" required>
+        <button type="submit" class="btn btn-primary">💾 حفظ</button>
+    </form>
+
+    {% if debug_channel_id %}
+    <form method="post" action="/dashboard/ai-prompt/debug-channel/clear"
+        onsubmit="return confirm('إيقاف قناة التتبع؟')">
+        <button type="submit" class="btn btn-danger btn-sm">⛔ إيقاف التتبع</button>
+    </form>
     {% endif %}
 
-    <!-- Current prompt editor -->
-    <div class="prompt-card">
-        <h2 style="margin:0 0 1rem;font-size:1rem;">📝 البرومبت الحالي</h2>
-
-        <div class="hint-box">
-            💡 اكتب <strong>تعليماتك فقط</strong> — البوت يُضيف <u>تلقائياً</u> في نهاية برومبتك:
-            <code>الرسالة: «...»</code> + <code>أجب برقم 0.0-1.0 فقط</code>
-            — لا تحتاج لإضافتهم.
-        </div>
-
-        <form method="post" action="/dashboard/ai-prompt/save">
-            <textarea class="prompt-textarea" name="prompt" {% if not has_providers %}disabled{% endif
-                %}>{{ current_prompt }}</textarea>
-            <div style="display:flex;gap:1rem;margin-top:1rem;">
-                <button type="submit" class="btn-save" {% if not has_providers %}disabled{% endif %}>💾 حفظ
-                    البرومبت</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Reset to default -->
-    <div class="prompt-card">
-        <h2 style="margin:0 0 0.5rem;font-size:1rem;">🔄 إعادة الضبط إلى الافتراضي</h2>
-        <p style="color:var(--text-secondary);font-size:0.9rem;margin:0 0 1rem;">
-            هذا يُعيد البرومبت المدمج في الكود ولا يحذف أي شيء بشكل دائم.
-        </p>
-        <form method="post" action="/dashboard/ai-prompt/reset"
-            onsubmit="return confirm('إعادة ضبط البرومبت إلى الافتراضي؟')">
-            <button type="submit" class="btn-reset" {% if not has_providers %}disabled{% endif %}>♻️ إعادة الضبط إلى
-                الافتراضي</button>
-        </form>
-    </div>
-
-    <div class="prompt-card" style="border-color:#6366f133;">
-        <h2 style="margin:0 0 1rem;font-size:1rem;">📋 ما يُضاف تلقائياً بعد تعليماتك (ثابت)</h2>
-        <pre
-            style="background:#6366f111;border:1px solid #6366f133;border-radius:8px;padding:1rem;font-size:0.85rem;direction:ltr;color:#a5b4fc;margin:0;">الرسالة: «[...نص الرسالة...]»
-أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر.</pre>
-        <p style="color:var(--text-secondary);font-size:0.8rem;margin:0.75rem 0 0;">تُضاف هذه الأسطر بعد تعليماتك دائماً
-            — لا تحتاج لكتابتها.</p>
-    </div>
-
-    <!-- Default instructions reference -->
-    <div class="prompt-card">
-        <h2 style="margin:0 0 1rem;font-size:1rem;">📋 التعليمات الافتراضية (للرجوع إليها)</h2>
-        <pre
-            style="background:var(--bg-hover);border-radius:8px;padding:1rem;font-size:0.8rem;direction:ltr;overflow-x:auto;color:var(--text-secondary);margin:0;">{{ default_prompt }}</pre>
-    </div>
-
-    <!-- Debug Channel -->
-    <div class="prompt-card"
-        style="border-color:{% if debug_channel_id %}#6366f1{% else %}var(--border-color){% endif %};">
-        <h2 style="margin:0 0 0.5rem;font-size:1rem;">🔬 قناة التتبع (Debug Channel)</h2>
-        <p style="color:var(--text-secondary);font-size:0.88rem;margin:0 0 1rem;">
-            البوت سيُرسل لهذه القناة/المجموعة نتيجة كل تحليل يجريه الذكاء الاصطناعي:
-            الرسالة + النتيجة + شريط التقدم + الإجراء المتخذ.
-        </p>
-
-        {% if debug_channel_id %}
-        <div
-            style="background:#6366f122;border:1px solid #6366f155;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;">
-            ✅ مُفعَّلة الآن — معرف القناة: <code style="color:#a5b4fc;">{{ debug_channel_id }}</code>
-        </div>
-        {% endif %}
-
-        <form method="post" action="/dashboard/ai-prompt/debug-channel/save"
-            style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;">
-            <input type="text" name="channel_id" value="{{ debug_channel_id or '' }}"
-                placeholder="مثال: -100123456789 أو @mychannel"
-                style="flex:1;background:var(--bg-hover);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.9rem;padding:0.6rem 1rem;outline:none;direction:ltr;"
-                required>
-            <button type="submit" class="btn-save" style="padding:0.6rem 1.2rem;font-size:0.9rem;">💾 حفظ</button>
-        </form>
-
-        {% if debug_channel_id %}
-        <form method="post" action="/dashboard/ai-prompt/debug-channel/clear"
-            onsubmit="return confirm('إيقاف قناة التتبع؟')">
-            <button type="submit" class="btn-reset" style="font-size:0.85rem;padding:0.5rem 1rem;">⛔ إيقاف
-                التتبع</button>
-        </form>
-        {% endif %}
-
-        <p style="color:var(--text-secondary);font-size:0.78rem;margin-top:0.75rem;">
-            💡 تأكد من أن البوت مُضاف للقناة/المجموعة كمشرف مع صلاحية نشر الرسائل.
-        </p>
-    </div>
+    <p style="color:var(--text-muted);font-size:0.78rem;margin-top:0.75rem;">
+        💡 تأكد من إضافة البوت للقناة كمشرف مع صلاحية النشر.
+    </p>
 </div>
 {% endblock %}

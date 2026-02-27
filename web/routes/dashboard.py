@@ -4,11 +4,13 @@ Admin dashboard with stats and management
 """
 import logging
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import os
 import httpx
+
+from web.auth import require_auth
 
 
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
@@ -29,7 +31,11 @@ from bot.core.config import (
 
 logger = logging.getLogger("vex.web.dashboard")
 
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+router = APIRouter(
+    prefix="/dashboard",
+    tags=["Dashboard"],
+    dependencies=[Depends(require_auth)],  # Every dashboard route requires login
+)
 templates = Jinja2Templates(
     directory=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")
 )
@@ -52,7 +58,8 @@ async def dashboard_page(request: Request):
         "user_count": user_count,
         "blocked_count": blocked_count,
         "group_count": group_count,
-    })
+            "active_page": "dashboard",
+    }})
 
 
 @router.get("/groups", response_class=HTMLResponse)
@@ -68,7 +75,8 @@ async def groups_page(request: Request):
         "request": request,
         "groups": groups,
         "bot_username": config.bot_username,
-    })
+            "active_page": "groups",
+    }})
 
 
 @router.get("/users", response_class=HTMLResponse)
@@ -84,7 +92,8 @@ async def users_page(request: Request):
         "request": request,
         "blocked_users": blocked,
         "bot_username": config.bot_username,
-    })
+            "active_page": "users",
+    }})
 
 
 @router.get("/logs", response_class=HTMLResponse)
@@ -109,7 +118,8 @@ async def logs_page(request: Request):
         "request": request,
         "bot_username": config.bot_username,
         "logs": log_content,
-    })
+            "active_page": "logs",
+    }})
 
 
 @router.get("/ai-stats", response_class=HTMLResponse)
@@ -158,7 +168,8 @@ async def ai_stats_page(request: Request):
         "bot_username": config.bot_username,
         "stats": stats,
         "summaries": summaries,
-    })
+            "active_page": "ai_stats",
+    }})
 
 
 @router.post("/ai-stats/{stat_id}/delete")
@@ -213,7 +224,8 @@ async def ai_providers_page(request: Request):
         "request": request,
         "bot_username": config.bot_username,
         "providers": providers,
-    })
+            "active_page": "ai_providers",
+    }})
 
 
 @router.post("/ai-providers/add")
@@ -277,7 +289,8 @@ async def group_words_page(request: Request, group_id: int, msg: str = ""):
         "group": group,
         "words": words,
         "msg": msg,
-    })
+            "active_page": "groups",
+    }})
 
 
 @router.post("/groups/{group_id}/words/add")
@@ -331,7 +344,8 @@ async def ai_prompt_page(request: Request, msg: str = ""):
         "default_prompt": DEFAULT_PROMPT_REFERENCE,
         "debug_channel_id": debug_ch,
         "msg": msg,
-    })
+            "active_page": "ai_prompt",
+    }})
 
 
 @router.post("/ai-prompt/save")

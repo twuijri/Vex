@@ -1,19 +1,135 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Vex{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <title>{% block title %}Vex Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css">
     {% block head %}{% endblock %}
 </head>
+
 <body>
-    {% block nav %}{% endblock %}
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
+    <div class="app-wrapper">
+
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="mobile-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">🤖</div>
+                <div>
+                    <div class="sidebar-title">Vex</div>
+                    <div class="sidebar-badge">@{{ bot_username }}</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">الرئيسية</div>
+                <a href="/dashboard/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span> لوحة التحكم
+                </a>
+
+                <div class="nav-section-label">الإدارة</div>
+                <a href="/dashboard/groups" class="nav-item {% if active_page == 'groups' %}active{% endif %}">
+                    <span class="nav-icon">👥</span> المجموعات
+                </a>
+                <a href="/dashboard/users" class="nav-item {% if active_page == 'users' %}active{% endif %}">
+                    <span class="nav-icon">👤</span> المستخدمون
+                </a>
+
+                <div class="nav-section-label">الذكاء الاصطناعي</div>
+                <a href="/dashboard/ai-providers"
+                    class="nav-item {% if active_page == 'ai_providers' %}active{% endif %}">
+                    <span class="nav-icon">🤖</span> المزودون
+                </a>
+                <a href="/dashboard/ai-stats" class="nav-item {% if active_page == 'ai_stats' %}active{% endif %}">
+                    <span class="nav-icon">📈</span> الإحصائيات
+                </a>
+                <a href="/dashboard/ai-prompt" class="nav-item {% if active_page == 'ai_prompt' %}active{% endif %}">
+                    <span class="nav-icon">✏️</span> البرومبت
+                </a>
+
+                <div class="nav-section-label">النظام</div>
+                <a href="/dashboard/logs" class="nav-item {% if active_page == 'logs' %}active{% endif %}">
+                    <span class="nav-icon">📑</span> السجلات
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <form method="post" action="/dashboard/logout">
+                    <button type="submit" class="btn btn-ghost btn-full btn-sm"
+                        style="color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15);">
+                        🚪 تسجيل الخروج
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main">
+
+            <!-- Mobile Top Bar -->
+            <div class="mobile-topbar">
+                <div class="mobile-topbar-brand">
+                    <span>🤖</span> Vex
+                </div>
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+            </div>
+
+            <!-- Desktop Top Bar -->
+            <div class="topbar">
+                <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+                <div class="topbar-actions">
+                    <form method="post" action="/dashboard/logout" style="margin:0;">
+                        <button type="submit" class="btn btn-ghost btn-sm">🚪 خروج</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Page -->
+            <div class="page-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="mobile-nav">
+            <div class="mobile-nav-items">
+                <a href="/dashboard/" class="mobile-nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="tab-icon">📊</span><span>الرئيسية</span>
+                </a>
+                <a href="/dashboard/groups" class="mobile-nav-item {% if active_page == 'groups' %}active{% endif %}">
+                    <span class="tab-icon">👥</span><span>المجموعات</span>
+                </a>
+                <a href="/dashboard/ai-providers"
+                    class="mobile-nav-item {% if active_page == 'ai_providers' %}active{% endif %}">
+                    <span class="tab-icon">🤖</span><span>الذكاء</span>
+                </a>
+                <a href="/dashboard/ai-prompt"
+                    class="mobile-nav-item {% if active_page == 'ai_prompt' %}active{% endif %}">
+                    <span class="tab-icon">✏️</span><span>البرومبت</span>
+                </a>
+                <a href="/dashboard/logs" class="mobile-nav-item {% if active_page == 'logs' %}active{% endif %}">
+                    <span class="tab-icon">📑</span><span>السجلات</span>
+                </a>
+            </div>
+        </nav>
+
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

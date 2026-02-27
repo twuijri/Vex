@@ -1,97 +1,58 @@
 {% extends "base.html" %}
-
-{% block title %}Vex — سجلات النظام{% endblock %}
-
-{% block head %}
-<style>
-    .log-container {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-        height: 70vh;
-    }
-
-    .log-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .log-viewer {
-        background: #1e1e2e;
-        color: #cdd6f4;
-        font-family: monospace;
-        padding: 1rem;
-        border-radius: 8px;
-        overflow-y: auto;
-        flex-grow: 1;
-        white-space: pre-wrap;
-        word-break: break-all;
-        direction: ltr;
-        text-align: left;
-    }
-
-    .btn-refresh {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-family: inherit;
-        font-weight: 500;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: opacity 0.2s;
-    }
-
-    .btn-refresh:hover {
-        opacity: 0.9;
-    }
-</style>
-<script>
-    function scrollToBottom() {
-        const viewer = document.getElementById('log-viewer');
-        viewer.scrollTop = viewer.scrollHeight;
-    }
-    window.onload = scrollToBottom;
-</script>
-{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link active">📑 السجلات</a>
-    </div>
-</nav>
-{% endblock %}
+{% block title %}Vex — السجلات{% endblock %}
+{% block page_title %}📑 سجلات النظام{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <div class="log-container">
-        <div class="log-header">
-            <h1 class="page-title" style="margin: 0; font-size: 1.5rem;">📑 سجلات النظام (Logs)</h1>
-            <a href="/dashboard/logs" class="btn-refresh">🔄 تحديث</a>
-        </div>
+<div class="page-header"
+    style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+    <div>
+        <h1 class="page-title">سجلات النظام</h1>
+        <p class="page-subtitle">آخر الأحداث والأخطاء</p>
+    </div>
+    <a href="/dashboard/logs" class="btn btn-ghost btn-sm">🔄 تحديث</a>
+</div>
 
-        <div class="log-viewer" id="log-viewer">{{ logs }}</div>
+{% if logs %}
+<div class="card" style="padding:0;">
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>المستوى</th>
+                    <th>المصدر</th>
+                    <th>الرسالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;">{{ log.timestamp }}</td>
+                    <td>
+                        {% if log.level == 'ERROR' or log.level == 'CRITICAL' %}
+                        <span class="badge badge-danger">{{ log.level }}</span>
+                        {% elif log.level == 'WARNING' %}
+                        <span class="badge badge-warning">{{ log.level }}</span>
+                        {% else %}
+                        <span class="badge badge-navy">{{ log.level }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);direction:ltr;text-align:left;">{{ log.source
+                        }}</td>
+                    <td style="font-size:0.83rem;direction:ltr;text-align:left;word-break:break-all;">{{ log.message }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📑</div>
+        <div class="empty-state-text">لا توجد سجلات متاحة</div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

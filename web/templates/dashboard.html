@@ -1,83 +1,73 @@
 {% extends "base.html" %}
-
 {% block title %}Vex — لوحة التحكم{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link active">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link">🤖 الذكاء الاصطناعي</a>
-        <a href="/dashboard/ai-prompt" class="nav-link">✏️ برومبت الذكاء</a>
-    </div>
-</nav>
-{% endblock %}
+{% block page_title %}📊 لوحة التحكم{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">📊 لوحة التحكم</h1>
+<div class="page-header">
+    <h1 class="page-title">أهلاً بك في Vex 👋</h1>
+    <p class="page-subtitle">نظرة عامة على البوت والمجموعات</p>
+</div>
 
-    <div class="stats-grid">
-        <div class="stat-card stat-users">
-            <div class="stat-icon">👤</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ user_count }}</div>
-                <div class="stat-label">المستخدمين</div>
-            </div>
-        </div>
-
-        <div class="stat-card stat-groups">
-            <div class="stat-icon">👥</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ group_count }}</div>
-                <div class="stat-label">المجموعات المُدارة</div>
-            </div>
-        </div>
-
-        <div class="stat-card stat-blocked">
-            <div class="stat-icon">🚫</div>
-            <div class="stat-info">
-                <div class="stat-value">{{ blocked_count }}</div>
-                <div class="stat-label">المحظورين</div>
-            </div>
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon-wrap navy">👤</div>
+        <div>
+            <div class="stat-value">{{ user_count }}</div>
+            <div class="stat-label">إجمالي المستخدمين</div>
         </div>
     </div>
-
-    <div class="quick-actions">
-        <h2>⚡ إجراءات سريعة</h2>
-        <div class="actions-grid">
-            <a href="/dashboard/groups" class="action-card">
-                <span class="action-icon">📋</span>
-                <span class="action-label">إدارة المجموعات</span>
-            </a>
-            <a href="/dashboard/users" class="action-card">
-                <span class="action-icon">🚫</span>
-                <span class="action-label">المحظورين</span>
-            </a>
-            <a href="/dashboard/ai-providers" class="action-card">
-                <span class="action-icon">🤖</span>
-                <span class="action-label">مزودو الذكاء الاصطناعي</span>
-            </a>
-            <a href="/dashboard/ai-stats" class="action-card">
-                <span class="action-icon">📈</span>
-                <span class="action-label">إحصائيات الذكاء الاصطناعي</span>
-            </a>
-            <a href="/dashboard/logs" class="action-card">
-                <span class="action-icon">📑</span>
-                <span class="action-label">سجلات النظام</span>
-            </a>
-            <a href="/dashboard/ai-prompt" class="action-card">
-                <span class="action-icon">✏️</span>
-                <span class="action-label">برومبت الذكاء الاصطناعي</span>
-            </a>
+    <div class="stat-card">
+        <div class="stat-icon-wrap gold">👥</div>
+        <div>
+            <div class="stat-value">{{ group_count }}</div>
+            <div class="stat-label">المجموعات المُدارة</div>
         </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon-wrap red">🚫</div>
+        <div>
+            <div class="stat-value">{{ blocked_count }}</div>
+            <div class="stat-label">المحظورون</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon-wrap green">🛡️</div>
+        <div>
+            <div class="stat-value">{{ admin_count }}</div>
+            <div class="stat-label">المشرفون</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:1rem;">⚡ وصول سريع</h2>
+    <div class="actions-grid">
+        <a href="/dashboard/groups" class="action-card">
+            <span class="action-icon">📋</span>
+            <span class="action-label">إدارة المجموعات</span>
+        </a>
+        <a href="/dashboard/users" class="action-card">
+            <span class="action-icon">🚫</span>
+            <span class="action-label">المحظورون</span>
+        </a>
+        <a href="/dashboard/ai-providers" class="action-card">
+            <span class="action-icon">🤖</span>
+            <span class="action-label">مزودو الذكاء</span>
+        </a>
+        <a href="/dashboard/ai-stats" class="action-card">
+            <span class="action-icon">📈</span>
+            <span class="action-label">إحصائيات AI</span>
+        </a>
+        <a href="/dashboard/ai-prompt" class="action-card">
+            <span class="action-icon">✏️</span>
+            <span class="action-label">محرر البرومبت</span>
+        </a>
+        <a href="/dashboard/logs" class="action-card">
+            <span class="action-icon">📑</span>
+            <span class="action-label">سجلات النظام</span>
+        </a>
     </div>
 </div>
 {% endblock %}

@@ -1,70 +1,58 @@
 {% extends "base.html" %}
-
 {% block title %}Vex — المجموعات{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link active">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link">🤖 الذكاء الاصطناعي</a>
-    </div>
-</nav>
-{% endblock %}
+{% block page_title %}👥 المجموعات المُدارة{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">👥 المجموعات المُدارة</h1>
+<div class="page-header">
+    <h1 class="page-title">المجموعات المُدارة</h1>
+    <p class="page-subtitle">جميع المجموعات التي يديرها البوت</p>
+</div>
 
-    {% if groups %}
-    <div class="table-container">
-        <table class="data-table">
+{% if groups %}
+<div class="card" style="padding:0;">
+    <div class="table-wrap">
+        <table class="table">
             <thead>
                 <tr>
-                    <th>اسم المجموعة</th>
-                    <th>معرف المجموعة</th>
-                    <th>نوع المجموعة</th>
-                    <th>الحالة</th>
-                    <th>تاريخ التفعيل</th>
+                    <th>المجموعة</th>
+                    <th>المعرف</th>
                     <th>الكلمات المحظورة</th>
+                    <th>الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
-                {% for group in groups %}
+                {% for g in groups %}
                 <tr>
-                    <td><strong>{{ group.group_name }}</strong></td>
-                    <td class="mono">{{ group.telegram_group_id }}</td>
-                    <td>{{ group.group_type or "—" }}</td>
                     <td>
-                        <span class="badge badge-{{ 'success' if group.is_active else 'danger' }}">
-                            {{ "مفعل" if group.is_active else "معطل" }}
-                        </span>
+                        <div style="font-weight:700;color:var(--primary);">{{ g.title or 'بدون اسم' }}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">{{ g.group_id }}</div>
                     </td>
-                    <td>{{ group.activated_at.strftime('%Y-%m-%d') if group.activated_at else "—" }}</td>
+                    <td><code
+                            style="font-size:0.8rem;background:var(--bg);padding:0.2rem 0.5rem;border-radius:6px;">{{ g.group_id }}</code>
+                    </td>
                     <td>
-                        <a href="/dashboard/groups/{{ group.id }}/words"
-                            style="color:var(--primary-color);font-weight:600;text-decoration:none;">
-                            🚫 إدارة الكلمات
-                        </a>
+                        <span class="badge badge-navy">{{ g.blocked_words | length }} كلمة</span>
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                            <a href="/dashboard/groups/{{ g.group_id }}/words" class="btn btn-secondary btn-sm">📝
+                                الكلمات</a>
+                            <a href="/dashboard/groups/{{ g.group_id }}/settings" class="btn btn-ghost btn-sm">⚙️
+                                إعدادات</a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <h3>لا يوجد مجموعات مفعلة</h3>
-        <p>أضف البوت بصفة مشرف في المجموعة، ثم أرسل <b>#تفعيل</b> أو <b>/تفعيل</b> لتفعيلها</p>
-    </div>
-    {% endif %}
 </div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">👥</div>
+        <div class="empty-state-text">لا توجد مجموعات مُفعَّلة بعد.<br>أضف البوت لمجموعة واكتب <code>/start</code></div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

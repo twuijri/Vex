@@ -1,412 +1,160 @@
 {% extends "base.html" %}
-
-{% block title %}Vex — إدارة مزودي الذكاء الاصطناعي{% endblock %}
+{% block title %}Vex — مزودو الذكاء الاصطناعي{% endblock %}
+{% block page_title %}🤖 مزودو الذكاء الاصطناعي{% endblock %}
 
 {% block head %}
-<style>
-    .provider-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .provider-row {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        transition: border-color 0.2s;
-    }
-
-    .provider-row:hover {
-        border-color: var(--primary-color);
-    }
-
-    .provider-row.inactive {
-        opacity: 0.5;
-    }
-
-    .provider-order {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--primary-color);
-        min-width: 32px;
-        text-align: center;
-    }
-
-    .provider-icon {
-        font-size: 1.8rem;
-    }
-
-    .provider-info {
-        flex: 1;
-    }
-
-    .provider-name {
-        font-weight: 700;
-        font-size: 1rem;
-    }
-
-    .provider-meta {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        margin-top: 0.15rem;
-    }
-
-    .provider-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .btn-sm {
-        border: none;
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: opacity 0.2s;
-    }
-
-    .btn-sm:hover {
-        opacity: 0.8;
-    }
-
-    .btn-move {
-        background: var(--bg-hover);
-        color: var(--text-primary);
-    }
-
-    .btn-toggle {
-        background: #16a34a22;
-        color: #4ade80;
-    }
-
-    .btn-toggle.off {
-        background: #dc262622;
-        color: #f87171;
-    }
-
-    .btn-delete {
-        background: #dc262622;
-        color: #f87171;
-    }
-
-    /* Add form */
-    .add-form-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.5rem;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-
-    .form-group label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-    }
-
-    .form-group input,
-    .form-group select {
-        background: var(--bg-hover);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        color: var(--text-primary);
-        font-family: inherit;
-        font-size: 0.9rem;
-        padding: 0.6rem 0.85rem;
-        outline: none;
-        transition: border-color 0.2s;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-        border-color: var(--primary-color);
-    }
-
-    .form-group input[type="password"] {
-        direction: ltr;
-    }
-
-    .btn-add {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.65rem 1.5rem;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 1rem;
-        font-weight: 700;
-        margin-top: 0.5rem;
-        width: 100%;
-        transition: opacity 0.2s;
-    }
-
-    .btn-add:hover {
-        opacity: 0.9;
-    }
-
-    /* Model presets shown/hidden */
-    .model-presets {
-        grid-column: 1 / -1;
-    }
-
-    /* Priority hint */
-    .priority-hint {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-        margin-top: 0.25rem;
-    }
-
-    /* Icons by type */
-    .icon-google_studio {
-        color: #4285f4;
-    }
-
-    .icon-blackbox {
-        color: #a78bfa;
-    }
-
-    .icon-huggingface {
-        color: #fb923c;
-    }
-
-    .empty-list {
-        text-align: center;
-        padding: 3rem;
-        color: var(--text-secondary);
-        font-size: 1rem;
-    }
-</style>
 <script>
     const MODEL_PRESETS = {
         google_studio: [
-            // الأرخص والأسرع
             { v: "gemini-2.0-flash", l: "Gemini 2.0 Flash       — مجاني · سريع جداً ⚡" },
             { v: "gemini-2.0-flash-lite", l: "Gemini 2.0 Flash Lite  — مجاني · الأرخص 💚" },
             { v: "gemini-1.5-flash", l: "Gemini 1.5 Flash       — مجاني · موصى به ✅" },
             { v: "gemini-1.5-flash-8b", l: "Gemini 1.5 Flash-8B    — مجاني · صغير وسريع" },
-            // أقوى لكن أبطأ
             { v: "gemini-1.5-pro", l: "Gemini 1.5 Pro         — مجاني · 50 طلب/يوم" },
             { v: "gemini-2.0-pro", l: "Gemini 2.0 Pro         — مدفوع · الأقوى 💎" },
         ],
         blackbox: [
-            // رخيصة جداً
             { v: "deepseek-v3", l: "DeepSeek V3            — $0.07/M · الأرخص ⭐" },
             { v: "deepseek-r1", l: "DeepSeek R1            — $0.14/M · تفكير عميق" },
             { v: "meta-llama/Llama-3.3-70b", l: "Llama 3.3 70B          — $0.20/M · مفتوح المصدر" },
-            { v: "meta-llama/Llama-3.1-405b", l: "Llama 3.1 405B         — $0.30/M · ضخم" },
-            // متوسطة
-            { v: "claude-3-5-haiku-20241022", l: "Claude 3.5 Haiku       — $0.25/M · سريع 🔵" },
-            { v: "gemini-1.5-flash", l: "Gemini 1.5 Flash       — $0.30/M · متوازن" },
+            { v: "claude-3-5-haiku-20241022", l: "Claude 3.5 Haiku       — $0.25/M · سريع" },
             { v: "gpt-4o-mini", l: "GPT-4o Mini            — $0.50/M · متوازن" },
-            // غالية (لا تستخدم للاعتدال)
-            { v: "claude-3-5-sonnet-20241022", l: "Claude 3.5 Sonnet      — $3/M  · غالي 🔴" },
-            { v: "gpt-4o", l: "GPT-4o                 — $5/M  · غالي جداً 🔴" },
+            { v: "gpt-4o", l: "GPT-4o                 — $5/M  · غالي 🔴" },
         ],
         huggingface: [
-            { v: "aubmindlab/bert-base-arabertv02", l: "AraBERT — عربي متخصص 100% ✅" },
-            { v: "CAMeL-Lab/bert-base-arabic-camelbert-mix-sentiment", l: "CAMeL Sentiment — تحليل مشاعر عربي" },
+            { v: "aubmindlab/bert-base-arabertv02", l: "AraBERT — عربي متخصص ✅" },
+            { v: "CAMeL-Lab/bert-base-arabic-camelbert-mix-sentiment", l: "CAMeL Sentiment — مشاعر عربي" },
             { v: "facebook/bart-large-mnli", l: "BART MNLI — تصنيف عام" },
             { v: "joeddav/xlm-roberta-large-xnli", l: "XLM-RoBERTa — متعدد اللغات" },
         ],
     };
-
     function onTypeChange() {
         const type = document.getElementById('provider_type').value;
-        const modelSelect = document.getElementById('model_preset');
-        const modelInput = document.getElementById('model');
-
-        modelSelect.innerHTML = '';
-        const presets = MODEL_PRESETS[type] || [];
-        presets.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.v; opt.textContent = p.l;
-            modelSelect.appendChild(opt);
+        const sel = document.getElementById('model_preset');
+        sel.innerHTML = '';
+        (MODEL_PRESETS[type] || []).forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.v; o.textContent = p.l;
+            sel.appendChild(o);
         });
-        if (presets.length) modelInput.value = presets[0].v;
-
-        document.getElementById('model_label').textContent =
-            type === 'huggingface' ? 'النموذج (HuggingFace repo/model)' : 'النموذج';
+        document.getElementById('model').value = (MODEL_PRESETS[type] || [])[0]?.v || '';
     }
-
     function onPresetChange() {
-        const val = document.getElementById('model_preset').value;
-        document.getElementById('model').value = val;
+        document.getElementById('model').value = document.getElementById('model_preset').value;
     }
-
     async function fetchModels() {
         const type = document.getElementById('provider_type').value;
         const key = document.getElementById('api_key_input').value.trim();
         if (!key) { alert('أدخل مفتاح الـ API أولاً'); return; }
-
-        const btn = document.getElementById('btn_fetch_models');
-        btn.textContent = '⏳ جاري الجلب...';
-        btn.disabled = true;
-
+        const btn = document.getElementById('btn_fetch');
+        btn.textContent = '⏳ جاري الجلب...'; btn.disabled = true;
         try {
-            const url = `/dashboard/ai-providers/fetch-models?provider_type=${encodeURIComponent(type)}&api_key=${encodeURIComponent(key)}`;
-            const resp = await fetch(url);
-            const data = await resp.json();
-
-            if (data.error && !data.models.length) {
-                alert('خطأ: ' + data.error);
-                return;
-            }
-            const select = document.getElementById('model_preset');
-            select.innerHTML = '';
-            data.models.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m; opt.textContent = m;
-                select.appendChild(opt);
+            const r = await fetch(`/dashboard/ai-providers/fetch-models?provider_type=${encodeURIComponent(type)}&api_key=${encodeURIComponent(key)}`);
+            const d = await r.json();
+            const sel = document.getElementById('model_preset');
+            sel.innerHTML = '';
+            (d.models || []).forEach(m => {
+                const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
             });
-            if (data.models.length) {
-                document.getElementById('model').value = data.models[0];
-                alert(`✅ تم جلب ${data.models.length} موديل. اختر من القائمة.`);
-            }
-        } finally {
-            btn.textContent = '🔍 جلب الموديلات';
-            btn.disabled = false;
-        }
+            if (d.models?.length) { document.getElementById('model').value = d.models[0]; alert(`✅ جُلب ${d.models.length} موديل`); }
+            else alert('لم يُعثر على موديلات: ' + (d.error || ''));
+        } finally { btn.textContent = '🔍 جلب الموديلات'; btn.disabled = false; }
     }
-
     window.onload = onTypeChange;
 </script>
 {% endblock %}
 
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link">📈 الإحصائيات</a>
-        <a href="/dashboard/ai-providers" class="nav-link active">🤖 مزودو الذكاء الاصطناعي</a>
-    </div>
-</nav>
-{% endblock %}
-
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">🤖 مزودو الذكاء الاصطناعي</h1>
-    <p style="color:var(--text-secondary);margin-bottom:1.5rem;">
-        يتم تجربة المزودين بالترتيب من الأعلى للأسفل. إذا فشل أو استنفذ أحدهم يوميه، ينتقل البوت تلقائياً للتالي.
-    </p>
+<div class="page-header">
+    <h1 class="page-title">مزودو الذكاء الاصطناعي</h1>
+    <p class="page-subtitle">يُجرَّب المزودون بالترتيب — إذا فشل أحدهم انتقل للتالي تلقائياً</p>
+</div>
 
-    <!-- Provider list -->
-    <div class="provider-list">
-        {% if not providers %}
-        <div class="empty-list">🌙 لم تُضف أي مزودين بعد. أضف أول مزود من النموذج أدناه.</div>
-        {% endif %}
+<!-- Provider list -->
+{% if providers %}
+<div class="provider-list">
+    {% for p in providers %}
+    {% set icons = {"google_studio": "🔵", "blackbox": "🟣", "huggingface": "🟠"} %}
+    <div class="provider-card {% if not p.is_active %}inactive{% endif %}">
+        <div class="provider-order">{{ loop.index }}</div>
+        <div class="provider-icon">{{ icons.get(p.provider_type, "🤖") }}</div>
+        <div class="provider-info">
+            <div class="provider-name">{{ p.name }}</div>
+            <div class="provider-meta">{{ p.provider_type }} · {{ p.model }} · مفتاح: {{ p.api_key[:6] }}••••</div>
+        </div>
+        <div class="provider-actions">
+            {% if not loop.first %}
+            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="btn btn-ghost btn-sm" title="أعلى">⬆️</button>
+            </form>
+            {% endif %}
+            {% if not loop.last %}
+            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="btn btn-ghost btn-sm" title="أسفل">⬇️</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/toggle">
+                <button type="submit" class="btn btn-sm {% if p.is_active %}btn-success{% else %}btn-danger{% endif %}">
+                    {% if p.is_active %}✅ مفعّل{% else %}⛔ معطّل{% endif %}
+                </button>
+            </form>
+            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/delete"
+                onsubmit="return confirm('حذف {{ p.name }}؟')">
+                <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="empty-state">
+        <div class="empty-state-icon">🤖</div>
+        <div class="empty-state-text">لم تُضف أي مزودين — أضف أول مزود من النموذج أدناه</div>
+    </div>
+</div>
+{% endif %}
 
-        {% for p in providers %}
-        {% set icons = {"google_studio": "🔵", "blackbox": "🟣", "huggingface": "🟠"} %}
-        <div class="provider-row {% if not p.is_active %}inactive{% endif %}">
-            <div class="provider-order">{{ loop.index }}</div>
-            <div class="provider-icon">{{ icons.get(p.provider_type, "🤖") }}</div>
-            <div class="provider-info">
-                <div class="provider-name">{{ p.name }}</div>
-                <div class="provider-meta">
-                    {{ p.provider_type }} · {{ p.model }}
-                    · المفتاح: <code>{{ p.api_key[:8] }}••••</code>
-                </div>
+<!-- Add form -->
+<div class="card">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:1.25rem;">➕ إضافة مزود جديد</h2>
+    <form method="post" action="/dashboard/ai-providers/add">
+        <div class="form-grid" style="margin-bottom:1rem;">
+            <div class="form-group">
+                <label class="form-label">الاسم (للتعريف فقط)</label>
+                <input class="input" type="text" name="name" placeholder="مثال: Gemini Key 1" required>
             </div>
-            <div class="provider-actions">
-                <!-- Move up -->
-                {% if not loop.first %}
-                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
-                    <input type="hidden" name="direction" value="up">
-                    <button class="btn-sm btn-move" title="تحريك للأعلى">⬆️</button>
-                </form>
-                {% endif %}
-                <!-- Move down -->
-                {% if not loop.last %}
-                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
-                    <input type="hidden" name="direction" value="down">
-                    <button class="btn-sm btn-move" title="تحريك للأسفل">⬇️</button>
-                </form>
-                {% endif %}
-                <!-- Toggle -->
-                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/toggle">
-                    <button class="btn-sm btn-toggle {% if not p.is_active %}off{% endif %}">
-                        {% if p.is_active %}✅ مفعّل{% else %}⛔ معطّل{% endif %}
-                    </button>
-                </form>
-                <!-- Delete -->
-                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/delete">
-                    <button class="btn-sm btn-delete" onclick="return confirm('حذف {{ p.name }}؟')">🗑️</button>
-                </form>
+            <div class="form-group">
+                <label class="form-label">نوع المزود</label>
+                <select class="select-field" name="provider_type" id="provider_type" onchange="onTypeChange()">
+                    <option value="google_studio">🔵 Google AI Studio</option>
+                    <option value="blackbox">🟣 Blackbox.ai</option>
+                    <option value="huggingface">🟠 HuggingFace</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">مفتاح API</label>
+                <input class="input" type="password" name="api_key" id="api_key_input" placeholder="أدخل مفتاح الـ API"
+                    required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">الترتيب (أصغر = يُجرَّب أولاً)</label>
+                <input class="input" type="number" name="priority" value="10" min="1" max="999">
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">النموذج</label>
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
+                    <select class="select-field" id="model_preset" onchange="onPresetChange()" style="flex:1;"></select>
+                    <button type="button" id="btn_fetch" onclick="fetchModels()" class="btn btn-ghost btn-sm">🔍 جلب
+                        الموديلات</button>
+                </div>
+                <input class="input" type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً"
+                    required>
             </div>
         </div>
-        {% endfor %}
-    </div>
-
-    <!-- Add form -->
-    <div class="add-form-card">
-        <h2 style="margin:0 0 1.25rem;font-size:1.1rem;">➕ إضافة مزود جديد</h2>
-        <form method="post" action="/dashboard/ai-providers/add">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>الاسم (للتعريف فقط)</label>
-                    <input type="text" name="name" placeholder="مثال: Gemini Key 1" required>
-                </div>
-                <div class="form-group">
-                    <label>نوع المزود</label>
-                    <select name="provider_type" id="provider_type" onchange="onTypeChange()">
-                        <option value="google_studio">🔵 Google AI Studio</option>
-                        <option value="blackbox">🟣 Blackbox.ai</option>
-                        <option value="huggingface">🟠 HuggingFace</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>مفتاح API</label>
-                    <input type="password" name="api_key" id="api_key_input" placeholder="أدخل مفتاح الـ API" required>
-                </div>
-                <div class="form-group">
-                    <label>الترتيب (أرقام أصغر = يُجرَّب أولاً)</label>
-                    <input type="number" name="priority" value="10" min="1" max="999">
-                    <span class="priority-hint">مثال: 1 → 2 → 3 → 10 (HuggingFace)</span>
-                </div>
-                <div class="form-group model-presets">
-                    <label id="model_label">النموذج</label>
-                    <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
-                        <select id="model_preset" onchange="onPresetChange()" style="flex:1;">
-                        </select>
-                        <button type="button" id="btn_fetch_models" onclick="fetchModels()"
-                            style="background:#6366f122;color:#a5b4fc;border:1px solid #6366f155;border-radius:8px;padding:0.5rem 0.85rem;cursor:pointer;font-family:inherit;font-size:0.82rem;white-space:nowrap;">
-                            🔍 جلب الموديلات
-                        </button>
-                    </div>
-                    <input type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً" required>
-                </div>
-            </div>
-            <button type="submit" class="btn-add">➕ إضافة المزود</button>
-        </form>
-    </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg">➕ إضافة المزود</button>
+    </form>
 </div>
 {% endblock %}

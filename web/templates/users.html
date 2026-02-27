@@ -1,46 +1,60 @@
 {% extends "base.html" %}
-
-{% block title %}Vex — المستخدمين{% endblock %}
-
-{% block nav %}
-<nav class="navbar">
-    <div class="nav-brand">
-        <span class="nav-logo">🤖</span>
-        <span class="nav-title">Vex</span>
-        <span class="nav-badge">@{{ bot_username }}</span>
-    </div>
-    <div class="nav-links">
-        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
-        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
-        <a href="/dashboard/users" class="nav-link active">👤 المستخدمين</a>
-        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
-        <a href="/dashboard/ai-stats" class="nav-link">🤖 الذكاء الاصطناعي</a>
-    </div>
-</nav>
-{% endblock %}
+{% block title %}Vex — المستخدمون{% endblock %}
+{% block page_title %}👤 المستخدمون والمحظورون{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1 class="page-title">🚫 المستخدمين المحظورين</h1>
+<div class="page-header">
+    <h1 class="page-title">المستخدمون والمحظورون</h1>
+    <p class="page-subtitle">إدارة قائمة المحظورين من لوحة التحكم</p>
+</div>
 
+<!-- Add to blocklist -->
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:1rem;">➕ حظر مستخدم</h2>
+    <form method="post" action="/dashboard/users/block"
+        style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:160px;">
+            <label class="form-label">معرف المستخدم</label>
+            <input class="input" type="text" name="user_id" placeholder="123456789" required>
+        </div>
+        <div class="form-group" style="flex:2;min-width:200px;">
+            <label class="form-label">السبب (اختياري)</label>
+            <input class="input" type="text" name="reason" placeholder="سبب الحظر...">
+        </div>
+        <button type="submit" class="btn btn-danger">🚫 حظر</button>
+    </form>
+</div>
+
+<!-- Blocked list -->
+<div class="card" style="padding:0;">
+    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-weight:700;color:var(--primary);">قائمة المحظورين</span>
+        <span class="badge badge-danger">{{ blocked_users | length }}</span>
+    </div>
     {% if blocked_users %}
-    <div class="table-container">
-        <table class="data-table">
+    <div class="table-wrap">
+        <table class="table">
             <thead>
                 <tr>
-                    <th>الاسم</th>
                     <th>المعرف</th>
-                    <th>Telegram ID</th>
+                    <th>السبب</th>
                     <th>تاريخ الحظر</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                {% for user in blocked_users %}
+                {% for u in blocked_users %}
                 <tr>
-                    <td><strong>{{ user.first_name }} {{ user.last_name or "" }}</strong></td>
-                    <td>{{ "@" + user.username if user.username else "—" }}</td>
-                    <td class="mono">{{ user.telegram_id }}</td>
-                    <td>{{ user.blocked_at.strftime('%Y-%m-%d %H:%M') if user.blocked_at else "—" }}</td>
+                    <td><code style="font-size:0.85rem;">{{ u.user_id }}</code></td>
+                    <td style="color:var(--text-muted);">{{ u.reason or '—' }}</td>
+                    <td style="color:var(--text-muted);font-size:0.8rem;">{{ u.created_at.strftime('%Y-%m-%d') if
+                        u.created_at else '—' }}</td>
+                    <td>
+                        <form method="post" action="/dashboard/users/unblock/{{ u.user_id }}"
+                            onsubmit="return confirm('رفع الحظر؟')">
+                            <button type="submit" class="btn btn-success btn-sm">✅ رفع الحظر</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -48,8 +62,8 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <div class="empty-icon">✅</div>
-        <h3>لا يوجد مستخدمين محظورين</h3>
+        <div class="empty-state-icon">✅</div>
+        <div class="empty-state-text">لا يوجد مستخدمون محظورون</div>
     </div>
     {% endif %}
 </div>

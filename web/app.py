@@ -42,8 +42,10 @@ def set_bot_app(bot_app):
 # Include routes
 from web.routes.setup import router as setup_router
 from web.routes.dashboard import router as dashboard_router
+from web.routes.auth import router as auth_router
 
 app.include_router(setup_router)
+app.include_router(auth_router)
 app.include_router(dashboard_router)
 
 
