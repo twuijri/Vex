@@ -3,32 +3,60 @@
 {% block page_title %}🤖 المزودون{% endblock %}
 
 {% block head %}
+<style>
+    /* Provider card: 2-row on mobile */
+    .pcard {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .pcard-actions {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 600px) {
+        .pcard {
+            flex-wrap: wrap;
+        }
+
+        .pcard-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pcard-actions {
+            width: 100%;
+            justify-content: flex-start;
+            border-top: 1px solid var(--border);
+            padding-top: 0.5rem;
+            margin-top: 0.1rem;
+        }
+    }
+</style>
 <script>
     const PRESETS = {
         google_studio: [
             { label: "Gemini 2.0 Flash — مجاني · سريع جداً", value: "gemini-2.0-flash" },
-            { label: "Gemini 2.0 Flash Lite — أخف", value: "gemini-2.0-flash-lite" },
+            { label: "Gemini 2.0 Flash Lite", value: "gemini-2.0-flash-lite" },
             { label: "Gemini 1.5 Flash", value: "gemini-1.5-flash" },
             { label: "Gemini 1.5 Pro", value: "gemini-1.5-pro" },
         ],
         huggingface: [
-            { label: "AraBART (نموذج عربي)", value: "moussaKam/AraBART" },
+            { label: "AraBART", value: "moussaKam/AraBART" },
             { label: "AraBERT v02", value: "aubmindlab/bert-base-arabertv02" },
             { label: "CAMeL BERT", value: "CAMeL-Lab/bert-base-arabic-camelbert-mix" },
         ],
         blackbox: [{ label: "(جلب تلقائي)", value: "" }],
     };
-
     function onTypeChange() {
         const type = document.getElementById("provider_type").value;
-        if (type === "blackbox") {
-            document.getElementById("api_key_input").placeholder = "ضع cookies/session أو API key";
-        } else {
-            document.getElementById("api_key_input").placeholder = "أدخل مفتاح الـ API";
-        }
+        document.getElementById("api_key_input").placeholder = type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API";
         populatePresets(type);
     }
-
     function populatePresets(type) {
         const sel = document.getElementById("model_preset");
         sel.innerHTML = "";
@@ -38,12 +66,10 @@
         });
         if (sel.options.length > 0) document.getElementById("model").value = sel.options[0].value;
     }
-
     function onPresetChange() {
         const val = document.getElementById("model_preset").value;
         if (val) document.getElementById("model").value = val;
     }
-
     async function fetchModels() {
         const type = document.getElementById("provider_type").value;
         const key = document.getElementById("api_key_input").value;
@@ -56,18 +82,12 @@
             if (d.models && d.models.length) {
                 const sel = document.getElementById("model_preset");
                 sel.innerHTML = "";
-                d.models.forEach(m => {
-                    const o = document.createElement("option");
-                    o.value = m; o.textContent = m; sel.appendChild(o);
-                });
+                d.models.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.appendChild(o); });
                 document.getElementById("model").value = d.models[0];
-            } else {
-                alert(d.error || "لا يوجد موديلات");
-            }
+            } else { alert(d.error || "لا يوجد موديلات"); }
         } catch (e) { alert("خطأ في الاتصال"); }
         btn.disabled = false; btn.textContent = "🔍 جلب الموديلات";
     }
-
     window.onload = () => populatePresets(document.getElementById("provider_type").value);
 </script>
 {% endblock %}
@@ -81,45 +101,49 @@
 {% if providers %}
 <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.5rem;">
     {% for p in providers %}
-    {% set icons = {"google_studio": "🔵", "blackbox": "🟣", "huggingface": "🟠"} %}
-    <div class="card card-sm {% if not p.is_active %}inactive{% endif %}"
-        style="display:flex;align-items:center;gap:0.75rem;opacity:{% if p.is_active %}1{% else %}.55{% endif %};">
-        <!-- Order + Icon -->
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-            <div class="provider-order">{{ loop.index }}</div>
-            <div style="font-size:1.4rem;">{{ icons.get(p.provider_type, "🤖") }}</div>
-        </div>
-        <!-- Info -->
-        <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;color:var(--primary);font-size:0.92rem;">{{ p.name }}</div>
-            <div
-                style="font-size:0.73rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                {{ p.provider_type }} · {{ p.model[:35] }}{% if p.model|length > 35 %}…{% endif %}
+    {% set icons = {"google_studio":"🔵","blackbox":"🟣","huggingface":"🟠"} %}
+    <div class="card card-sm" style="opacity:{% if p.is_active %}1{% else %}.55{% endif %};">
+        <div class="pcard">
+            <!-- Badge + icon -->
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                <div class="provider-order">{{ loop.index }}</div>
+                <span style="font-size:1.35rem;">{{ icons.get(p.provider_type,"🤖") }}</span>
             </div>
-        </div>
-        <!-- Actions -->
-        <div style="display:flex;gap:0.3rem;flex-shrink:0;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-            {% if not loop.first %}
-            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
-                <input type="hidden" name="direction" value="up">
-                <button type="submit" class="btn btn-ghost btn-sm">⬆️</button>
-            </form>
-            {% endif %}
-            {% if not loop.last %}
-            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
-                <input type="hidden" name="direction" value="down">
-                <button type="submit" class="btn btn-ghost btn-sm">⬇️</button>
-            </form>
-            {% endif %}
-            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/toggle">
-                <button type="submit" class="btn btn-sm {% if p.is_active %}btn-success{% else %}btn-danger{% endif %}">
-                    {% if p.is_active %}✅{% else %}⛔{% endif %}
-                </button>
-            </form>
-            <form method="post" action="/dashboard/ai-providers/{{ p.id }}/delete"
-                onsubmit="return confirm('حذف {{ p.name }}؟')">
-                <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
-            </form>
+            <!-- Info -->
+            <div class="pcard-info" style="flex:1;min-width:0;">
+                <div
+                    style="font-weight:700;color:var(--primary);font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ p.name }}</div>
+                <div
+                    style="font-size:0.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ p.provider_type }} · {{ p.model[:30] }}{% if p.model|length > 30 %}…{% endif %}
+                </div>
+            </div>
+            <!-- Actions -->
+            <div class="pcard-actions">
+                {% if not loop.first %}
+                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="btn btn-ghost btn-sm">⬆️</button>
+                </form>
+                {% endif %}
+                {% if not loop.last %}
+                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/move">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="btn btn-ghost btn-sm">⬇️</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/toggle">
+                    <button type="submit"
+                        class="btn btn-sm {% if p.is_active %}btn-success{% else %}btn-danger{% endif %}">
+                        {% if p.is_active %}✅ مفعّل{% else %}⛔ معطّل{% endif %}
+                    </button>
+                </form>
+                <form method="post" action="/dashboard/ai-providers/{{ p.id }}/delete"
+                    onsubmit="return confirm('حذف {{ p.name }}؟')">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}
@@ -163,7 +187,7 @@
                 <label class="form-label">النموذج</label>
                 <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap;">
                     <select class="select-field" id="model_preset" onchange="onPresetChange()"
-                        style="flex:1;min-width:150px;"></select>
+                        style="flex:1;min-width:140px;"></select>
                     <button type="button" id="btn_fetch" onclick="fetchModels()" class="btn btn-ghost btn-sm"
                         style="white-space:nowrap;">🔍 جلب الموديلات</button>
                 </div>
