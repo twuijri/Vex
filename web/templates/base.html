@@ -59,8 +59,8 @@
 
             <div class="sidebar-footer">
                 <form method="post" action="/dashboard/logout">
-                    <button type="submit" class="btn btn-ghost btn-full btn-sm"
-                        style="color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15);">
+                    <button type="submit" class="btn btn-full btn-sm"
+                        style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);">
                         🚪 تسجيل الخروج
                     </button>
                 </form>
@@ -81,11 +81,6 @@
             <!-- Desktop Top Bar -->
             <div class="topbar">
                 <div class="topbar-title">{% block page_title %}{% endblock %}</div>
-                <div class="topbar-actions">
-                    <form method="post" action="/dashboard/logout" style="margin:0;">
-                        <button type="submit" class="btn btn-ghost btn-sm">🚪 خروج</button>
-                    </form>
-                </div>
             </div>
 
             <!-- Page -->
