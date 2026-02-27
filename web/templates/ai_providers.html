@@ -243,6 +243,41 @@
         document.getElementById('model').value = val;
     }
 
+    async function fetchModels() {
+        const type = document.getElementById('provider_type').value;
+        const key = document.getElementById('api_key_input').value.trim();
+        if (!key) { alert('أدخل مفتاح الـ API أولاً'); return; }
+
+        const btn = document.getElementById('btn_fetch_models');
+        btn.textContent = '⏳ جاري الجلب...';
+        btn.disabled = true;
+
+        try {
+            const url = `/dashboard/ai-providers/fetch-models?provider_type=${encodeURIComponent(type)}&api_key=${encodeURIComponent(key)}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            if (data.error && !data.models.length) {
+                alert('خطأ: ' + data.error);
+                return;
+            }
+            const select = document.getElementById('model_preset');
+            select.innerHTML = '';
+            data.models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m; opt.textContent = m;
+                select.appendChild(opt);
+            });
+            if (data.models.length) {
+                document.getElementById('model').value = data.models[0];
+                alert(`✅ تم جلب ${data.models.length} موديل. اختر من القائمة.`);
+            }
+        } finally {
+            btn.textContent = '🔍 جلب الموديلات';
+            btn.disabled = false;
+        }
+    }
+
     window.onload = onTypeChange;
 </script>
 {% endblock %}
@@ -339,7 +374,7 @@
                 </div>
                 <div class="form-group">
                     <label>مفتاح API</label>
-                    <input type="password" name="api_key" placeholder="أدخل مفتاح الـ API" required>
+                    <input type="password" name="api_key" id="api_key_input" placeholder="أدخل مفتاح الـ API" required>
                 </div>
                 <div class="form-group">
                     <label>الترتيب (أرقام أصغر = يُجرَّب أولاً)</label>
@@ -348,8 +383,14 @@
                 </div>
                 <div class="form-group model-presets">
                     <label id="model_label">النموذج</label>
-                    <select id="model_preset" onchange="onPresetChange()" style="margin-bottom:0.5rem;">
-                    </select>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
+                        <select id="model_preset" onchange="onPresetChange()" style="flex:1;">
+                        </select>
+                        <button type="button" id="btn_fetch_models" onclick="fetchModels()"
+                            style="background:#6366f122;color:#a5b4fc;border:1px solid #6366f155;border-radius:8px;padding:0.5rem 0.85rem;cursor:pointer;font-family:inherit;font-size:0.82rem;white-space:nowrap;">
+                            🔍 جلب الموديلات
+                        </button>
+                    </div>
                     <input type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً" required>
                 </div>
             </div>

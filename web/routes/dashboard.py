@@ -4,10 +4,11 @@ Admin dashboard with stats and management
 """
 import logging
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Form, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import os
+import httpx
 
 from bot.core.config import load_bot_config
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
@@ -161,6 +162,37 @@ async def ai_stat_delete(stat_id: int):
     """Delete a single AI provider stat row"""
     await delete_provider_stat(stat_id)
     return RedirectResponse(url="/dashboard/ai-stats", status_code=303)
+
+# ── Fetch available models for a provider key ────────────────────────────────
+
+MODELS_ENDPOINTS = {
+    "blackbox": "https://api.blackbox.ai/v1/models",
+    "google_studio": None,   # Static list
+    "huggingface": None,     # Static list
+}
+
+@router.get("/ai-providers/fetch-models")
+async def fetch_provider_models(
+    provider_type: str = Query(...),
+    api_key: str = Query(...),
+):
+    """Fetch available model IDs for a given provider type and API key."""
+    url = MODELS_ENDPOINTS.get(provider_type)
+    if not url:
+        return JSONResponse({"models": [], "error": "لا يدعم الجلب التلقائي"})
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        models = [m.get("id", m) if isinstance(m, dict) else str(m)
+                  for m in data.get("data", data.get("models", []))]
+        return JSONResponse({"models": sorted(models)})
+    except Exception as e:
+        return JSONResponse({"models": [], "error": str(e)}, status_code=200)
 
 
 # ── AI Provider Management ────────────────────────────────────────────────────
