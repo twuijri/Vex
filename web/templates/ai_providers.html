@@ -80,7 +80,10 @@
         <div class="provider-icon">{{ icons.get(p.provider_type, "🤖") }}</div>
         <div class="provider-info">
             <div class="provider-name">{{ p.name }}</div>
-            <div class="provider-meta">{{ p.provider_type }} · {{ p.model }} · مفتاح: {{ p.api_key[:6] }}••••</div>
+            <div class="provider-meta">
+                <span>{{ p.provider_type }}</span>
+                <span class="hide-mobile"> · {{ p.model }} · مفتاح: {{ p.api_key[:6] }}••••</span>
+            </div>
         </div>
         <div class="provider-actions">
             {% if not loop.first %}
@@ -97,7 +100,8 @@
             {% endif %}
             <form method="post" action="/dashboard/ai-providers/{{ p.id }}/toggle">
                 <button type="submit" class="btn btn-sm {% if p.is_active %}btn-success{% else %}btn-danger{% endif %}">
-                    {% if p.is_active %}✅ مفعّل{% else %}⛔ معطّل{% endif %}
+                    {% if p.is_active %}<span class="hide-mobile">✅ مفعّل</span><span class="hide-desktop">✅</span>{%
+                    else %}<span class="hide-mobile">⛔ معطّل</span><span class="hide-desktop">⛔</span>{% endif %}
                 </button>
             </form>
             <form method="post" action="/dashboard/ai-providers/{{ p.id }}/delete"

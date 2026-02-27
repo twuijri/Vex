@@ -927,8 +927,7 @@ textarea {
         padding: 0.6rem 0.75rem;
     }
 
-    /* Prevent card / page content from overflowing */
-    .card,
+    /* Prevent page content from overflowing — but keep table-wrap scrollable */
     .page-content {
         max-width: 100%;
         overflow-x: hidden;
@@ -937,6 +936,18 @@ textarea {
 
     .provider-meta {
         max-width: 140px;
+    }
+}
+
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .hide-desktop {
+        display: none !important;
     }
 }
 

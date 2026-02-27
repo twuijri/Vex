@@ -15,9 +15,9 @@
             <thead>
                 <tr>
                     <th>المجموعة</th>
-                    <th>المعرف</th>
+                    <th class="hide-mobile">المعرف</th>
                     <th>الحالة</th>
-                    <th>الإجراءات</th>
+                    <th>إجراء</th>
                 </tr>
             </thead>
             <tbody>
@@ -25,9 +25,11 @@
                 <tr>
                     <td>
                         <div style="font-weight:700;color:var(--primary);">{{ g.group_name or 'بدون اسم' }}</div>
-                        <div style="font-size:0.75rem;color:var(--text-muted);">{{ g.group_type or 'مجموعة' }}</div>
+                        <div class="hide-desktop" style="font-size:0.72rem;color:var(--text-muted);direction:ltr;">{{
+                            g.telegram_group_id }}</div>
                     </td>
-                    <td><code
+                    <td class="hide-mobile" style="direction:ltr;">
+                        <code
                             style="font-size:0.8rem;background:var(--bg);padding:0.2rem 0.5rem;border-radius:6px;">{{ g.telegram_group_id }}</code>
                     </td>
                     <td>
@@ -39,7 +41,7 @@
                     </td>
                     <td>
                         <a href="/dashboard/groups/{{ g.telegram_group_id }}/words" class="btn btn-secondary btn-sm">📝
-                            الكلمات</a>
+                            كلمات</a>
                     </td>
                 </tr>
                 {% endfor %}

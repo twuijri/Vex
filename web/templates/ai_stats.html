@@ -9,7 +9,6 @@
 </div>
 
 {% if summaries %}
-<!-- Summary cards -->
 <div class="stats-grid" style="margin-bottom:1.5rem;">
     {% for s in summaries %}
     <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.5rem;">
@@ -27,8 +26,7 @@
         <div style="width:100%;">
             <div
                 style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.25rem;">
-                <span>الحصة اليومية</span>
-                <span>{{ s.today_pct }}%</span>
+                <span>الحصة اليومية</span><span>{{ s.today_pct }}%</span>
             </div>
             <div style="width:100%;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
                 <div
@@ -42,7 +40,6 @@
 </div>
 {% endif %}
 
-<!-- Detailed stats table -->
 {% if stats %}
 <div class="card" style="padding:0;">
     <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:700;color:var(--primary);">
@@ -53,9 +50,9 @@
             <thead>
                 <tr>
                     <th>المزود</th>
-                    <th>التاريخ</th>
+                    <th class="hide-mobile">التاريخ</th>
                     <th>الطلبات</th>
-                    <th>آخر استخدام</th>
+                    <th class="hide-mobile">آخر استخدام</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -63,15 +60,21 @@
             <tbody>
                 {% for s in stats %}
                 <tr>
-                    <td><span class="badge badge-navy" style="direction:ltr;">{{ s.provider }}</span></td>
-                    <td style="font-size:0.8rem;color:var(--text-muted);">{{ s.date }}</td>
+                    <td>
+                        <span class="badge badge-navy"
+                            style="direction:ltr;font-size:0.72rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
+                            s.provider }}</span>
+                        <div class="hide-desktop" style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">{{
+                            s.date }}</div>
+                    </td>
+                    <td class="hide-mobile" style="font-size:0.8rem;color:var(--text-muted);">{{ s.date }}</td>
                     <td><strong>{{ s.requests }}</strong></td>
-                    <td style="font-size:0.8rem;color:var(--text-muted);">{{ s.last_used }}</td>
+                    <td class="hide-mobile" style="font-size:0.8rem;color:var(--text-muted);">{{ s.last_used }}</td>
                     <td>
                         {% if s.status == 'ok' %}
-                        <span class="badge badge-success">✅ ok</span>
+                        <span class="badge badge-success">✅</span>
                         {% elif s.status and s.status != '—' %}
-                        <span class="badge badge-warning">⚠️ {{ s.status }}</span>
+                        <span class="badge badge-warning">⚠️</span>
                         {% else %}
                         <span style="color:var(--text-muted);">—</span>
                         {% endif %}
