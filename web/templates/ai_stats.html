@@ -45,29 +45,42 @@
 <div class="card" style="padding:0.75rem 1rem;margin-bottom:0.5rem;border-bottom:none;">
     <div style="font-weight:700;color:var(--primary);font-size:0.9rem;">📋 سجل الطلبات التفصيلي</div>
 </div>
-<div style="display:flex;flex-direction:column;gap:0.5rem;">
+<div style="display:flex;flex-direction:column;gap:0.6rem;">
     {% for s in stats %}
-    <div class="card card-sm" style="display:flex;align-items:center;gap:0.75rem;">
-        <div style="flex:1;min-width:0;">
-            <div
-                style="font-weight:700;font-size:0.85rem;color:var(--primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;">
-                {{ s.provider }}</div>
-            <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.1rem;">{{ s.date }} · آخر استخدام: {{
-                s.last_used }}</div>
+    <div class="card card-sm" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;">
+
+        <!-- Right Side: Info -->
+        <div style="flex:1;min-width:200px;">
+            <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;">
+                <span class="badge badge-navy" dir="ltr"
+                    style="font-size:0.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
+                    s.provider }}</span>
+                {% if s.status == 'ok' %}
+                <span class="badge badge-success" style="padding:0.15rem 0.3rem;" title="ممتازة">✅</span>
+                {% elif s.status and s.status != '—' %}
+                <span class="badge badge-warning" style="padding:0.15rem 0.3rem;" title="مشكلة">⚠️</span>
+                {% endif %}
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6;">
+                <div>📅 <strong>التاريخ:</strong> {{ s.date }}</div>
+                <div>🕒 <strong>آخر طلب:</strong> <span dir="ltr">{{ s.last_used }}</span></div>
+            </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-            <span style="font-weight:800;color:var(--primary);font-size:1rem;">{{ s.requests }}</span>
-            {% if s.status == 'ok' %}
-            <span class="badge badge-success">✅</span>
-            {% elif s.status and s.status != '—' %}
-            <span class="badge badge-warning">⚠️</span>
-            {% else %}
-            <span style="color:var(--text-muted);">—</span>
-            {% endif %}
+
+        <!-- Left Side: Counts & Action -->
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0;">
+            <div
+                style="text-align:center;background:var(--bg);padding:0.35rem 0.6rem;border-radius:8px;min-width:65px;">
+                <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;">الطلبات</div>
+                <div style="font-weight:800;color:var(--primary);font-size:1.15rem;line-height:1.1;">{{ s.requests }}
+                </div>
+            </div>
             <form method="post" action="/dashboard/ai-stats/{{ s.id }}/delete" onsubmit="return confirm('حذف؟')">
-                <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                <button type="submit" class="btn btn-danger btn-sm"
+                    style="height:42px;display:flex;align-items:center;justify-content:center;">🗑️</button>
             </form>
         </div>
+
     </div>
     {% endfor %}
 </div>
