@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vex Dashboard{% endblock %}</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23131B4F'/><text y='.9em' font-size='65' x='17'>🤖</text></svg>">
     <link rel="stylesheet" href="/static/css/style.css">
     {% block head %}{% endblock %}
 </head>
@@ -61,7 +63,7 @@
                 <form method="post" action="/dashboard/logout">
                     <button type="submit" class="btn btn-full btn-sm"
                         style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);">
-                        🚪 تسجيل الخروج
+                        ← تسجيل الخروج
                     </button>
                 </form>
             </div>

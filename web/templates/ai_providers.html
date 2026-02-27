@@ -145,10 +145,11 @@
             </div>
             <div class="form-group" style="grid-column:1/-1;">
                 <label class="form-label">النموذج</label>
-                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
-                    <select class="select-field" id="model_preset" onchange="onPresetChange()" style="flex:1;"></select>
-                    <button type="button" id="btn_fetch" onclick="fetchModels()" class="btn btn-ghost btn-sm">🔍 جلب
-                        الموديلات</button>
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <select class="select-field" id="model_preset" onchange="onPresetChange()"
+                        style="flex:1;min-width:150px;"></select>
+                    <button type="button" id="btn_fetch" onclick="fetchModels()" class="btn btn-ghost btn-sm"
+                        style="white-space:nowrap;">🔍 جلب الموديلات</button>
                 </div>
                 <input class="input" type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً"
                     required>

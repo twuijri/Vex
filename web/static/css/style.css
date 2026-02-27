@@ -53,6 +53,9 @@ body {
     color: var(--text);
     min-height: 100vh;
     line-height: 1.6;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 a {
@@ -511,6 +514,8 @@ textarea {
 
 .table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
 }
 
 .table {
@@ -683,6 +688,7 @@ textarea {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 180px;
 }
 
 .provider-actions {
@@ -919,6 +925,18 @@ textarea {
     .table th,
     .table td {
         padding: 0.6rem 0.75rem;
+    }
+
+    /* Prevent card / page content from overflowing */
+    .card,
+    .page-content {
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+
+    .provider-meta {
+        max-width: 140px;
     }
 }
 
