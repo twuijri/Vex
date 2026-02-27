@@ -202,8 +202,6 @@ textarea {
     flex-direction: column;
     min-height: 100vh;
     overflow-x: hidden;
-    /* Prevent horizontal scroll — safe here since sidebar is position:fixed outside .main */
-    max-width: calc(100vw - var(--sidebar-w));
 }
 
 .topbar {

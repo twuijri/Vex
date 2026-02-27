@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Vex — إحصائيات الذكاء الاصطناعي{% endblock %}
-{% block page_title %}📈 إحصائيات الذكاء الاصطناعي{% endblock %}
+{% block page_title %}📈 إحصائيات AI{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -16,7 +16,7 @@
             <div class="stat-icon-wrap navy">🤖</div>
             <div style="flex:1;min-width:0;">
                 <div
-                    style="font-weight:700;font-size:0.88rem;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    style="font-weight:700;font-size:0.88rem;color:var(--primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     {{ s.label }}</div>
                 <div style="font-size:0.75rem;color:var(--text-muted);">اليوم: {{ s.today }} طلب</div>
             </div>
@@ -40,62 +40,42 @@
 </div>
 {% endif %}
 
+<!-- Card list for detailed stats -->
 {% if stats %}
-<div class="card" style="padding:0;">
-    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:700;color:var(--primary);">
-        📋 سجل الطلبات التفصيلي
+<div class="card" style="padding:0.75rem 1rem;margin-bottom:0.5rem;border-bottom:none;">
+    <div style="font-weight:700;color:var(--primary);font-size:0.9rem;">📋 سجل الطلبات التفصيلي</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:0.5rem;">
+    {% for s in stats %}
+    <div class="card card-sm" style="display:flex;align-items:center;gap:0.75rem;">
+        <div style="flex:1;min-width:0;">
+            <div
+                style="font-weight:700;font-size:0.85rem;color:var(--primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;">
+                {{ s.provider }}</div>
+            <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.1rem;">{{ s.date }} · آخر استخدام: {{
+                s.last_used }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+            <span style="font-weight:800;color:var(--primary);font-size:1rem;">{{ s.requests }}</span>
+            {% if s.status == 'ok' %}
+            <span class="badge badge-success">✅</span>
+            {% elif s.status and s.status != '—' %}
+            <span class="badge badge-warning">⚠️</span>
+            {% else %}
+            <span style="color:var(--text-muted);">—</span>
+            {% endif %}
+            <form method="post" action="/dashboard/ai-stats/{{ s.id }}/delete" onsubmit="return confirm('حذف؟')">
+                <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+            </form>
+        </div>
     </div>
-    <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>المزود</th>
-                    <th class="hide-mobile">التاريخ</th>
-                    <th>الطلبات</th>
-                    <th class="hide-mobile">آخر استخدام</th>
-                    <th>الحالة</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in stats %}
-                <tr>
-                    <td>
-                        <span class="badge badge-navy"
-                            style="direction:ltr;font-size:0.72rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{
-                            s.provider }}</span>
-                        <div class="hide-desktop" style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">{{
-                            s.date }}</div>
-                    </td>
-                    <td class="hide-mobile" style="font-size:0.8rem;color:var(--text-muted);">{{ s.date }}</td>
-                    <td><strong>{{ s.requests }}</strong></td>
-                    <td class="hide-mobile" style="font-size:0.8rem;color:var(--text-muted);">{{ s.last_used }}</td>
-                    <td>
-                        {% if s.status == 'ok' %}
-                        <span class="badge badge-success">✅</span>
-                        {% elif s.status and s.status != '—' %}
-                        <span class="badge badge-warning">⚠️</span>
-                        {% else %}
-                        <span style="color:var(--text-muted);">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <form method="post" action="/dashboard/ai-stats/{{ s.id }}/delete"
-                            onsubmit="return confirm('حذف؟')">
-                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% endfor %}
 </div>
 {% else %}
 <div class="card">
     <div class="empty-state">
         <div class="empty-state-icon">📈</div>
-        <div class="empty-state-text">لا توجد إحصائيات بعد — ابعث رسائل للبوت ليبدأ التحليل</div>
+        <div class="empty-state-text">لا توجد إحصائيات بعد</div>
     </div>
 </div>
 {% endif %}
