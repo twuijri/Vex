@@ -59,7 +59,7 @@ async def dashboard_page(request: Request):
         "blocked_count": blocked_count,
         "group_count": group_count,
             "active_page": "dashboard",
-    }})
+    })
 
 
 @router.get("/groups", response_class=HTMLResponse)
@@ -76,7 +76,7 @@ async def groups_page(request: Request):
         "groups": groups,
         "bot_username": config.bot_username,
             "active_page": "groups",
-    }})
+    })
 
 
 @router.get("/users", response_class=HTMLResponse)
@@ -93,7 +93,7 @@ async def users_page(request: Request):
         "blocked_users": blocked,
         "bot_username": config.bot_username,
             "active_page": "users",
-    }})
+    })
 
 
 @router.get("/logs", response_class=HTMLResponse)
@@ -119,7 +119,7 @@ async def logs_page(request: Request):
         "bot_username": config.bot_username,
         "logs": log_content,
             "active_page": "logs",
-    }})
+    })
 
 
 @router.get("/ai-stats", response_class=HTMLResponse)
@@ -169,7 +169,7 @@ async def ai_stats_page(request: Request):
         "stats": stats,
         "summaries": summaries,
             "active_page": "ai_stats",
-    }})
+    })
 
 
 @router.post("/ai-stats/{stat_id}/delete")
@@ -225,7 +225,7 @@ async def ai_providers_page(request: Request):
         "bot_username": config.bot_username,
         "providers": providers,
             "active_page": "ai_providers",
-    }})
+    })
 
 
 @router.post("/ai-providers/add")
@@ -290,7 +290,7 @@ async def group_words_page(request: Request, group_id: int, msg: str = ""):
         "words": words,
         "msg": msg,
             "active_page": "groups",
-    }})
+    })
 
 
 @router.post("/groups/{group_id}/words/add")
@@ -345,7 +345,7 @@ async def ai_prompt_page(request: Request, msg: str = ""):
         "debug_channel_id": debug_ch,
         "msg": msg,
             "active_page": "ai_prompt",
-    }})
+    })
 
 
 @router.post("/ai-prompt/save")
