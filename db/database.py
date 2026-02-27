@@ -6,6 +6,7 @@ import os
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import text
 
 from db.models import Base
 
@@ -27,9 +28,23 @@ async_session = async_sessionmaker(
 
 
 async def init_db():
-    """Create all tables if they don't exist"""
+    """Create all tables if they don't exist, then run column migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ── Column migrations (safe: IF NOT EXISTS) ──────────────────────────
+        # Run after create_all so tables exist; skipped if columns already present.
+        migrations = [
+            # BotConfig new columns added after initial schema
+            "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_prompt_override TEXT",
+            "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_debug_channel_id BIGINT",
+        ]
+        for sql in migrations:
+            try:
+                await conn.execute(text(sql))
+            except Exception as exc:
+                # SQLite doesn't support IF NOT EXISTS on ALTER TABLE → skip
+                import logging
+                logging.getLogger("vex.db").debug(f"Migration skipped ({exc}): {sql}")
 
 
 async def get_session() -> AsyncSession:
