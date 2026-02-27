@@ -4,13 +4,11 @@ Admin dashboard with stats and management
 """
 import logging
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import os
 import httpx
-
-from web.auth import require_auth
 
 
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
@@ -31,11 +29,7 @@ from bot.core.config import (
 
 logger = logging.getLogger("vex.web.dashboard")
 
-router = APIRouter(
-    prefix="/dashboard",
-    tags=["Dashboard"],
-    dependencies=[Depends(require_auth)],  # Every dashboard route requires login
-)
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 templates = Jinja2Templates(
     directory=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")
 )
@@ -51,6 +45,7 @@ async def dashboard_page(request: Request):
     user_count = await get_user_count()
     blocked_count = await get_blocked_count()
     group_count = await get_group_count()
+    admins = await list_admins()
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
@@ -58,7 +53,8 @@ async def dashboard_page(request: Request):
         "user_count": user_count,
         "blocked_count": blocked_count,
         "group_count": group_count,
-            "active_page": "dashboard",
+        "admin_count": len(admins),
+        "active_page": "dashboard",
     })
 
 

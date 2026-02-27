@@ -12,6 +12,8 @@ services:
       - WEB_HOST=0.0.0.0
       - WEB_PORT=8080
       - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-admin}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
     depends_on:
       db:
         condition: service_healthy

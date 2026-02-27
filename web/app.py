@@ -21,6 +21,10 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = FastAPI(title="Vex Dashboard", docs_url=None, redoc_url=None)
 
+# Import middleware early (before route includes)
+from web.auth import DashboardAuthMiddleware
+app.add_middleware(DashboardAuthMiddleware)
+
 # Mount static files
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
