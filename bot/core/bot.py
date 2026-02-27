@@ -46,6 +46,8 @@ def _register_handlers(app: Application):
     from bot.handlers.antispam.welcome import register_welcome_handlers
     from bot.handlers.antispam.rules import register_rules_handlers
     from bot.handlers.antispam.words import register_words_handlers
+    from bot.handlers.antispam.content_guard import register_content_guard_handlers
+    from bot.handlers.antispam.moderation_callbacks import register_moderation_callback_handlers
 
     register_start_handlers(app)
     register_forward_handlers(app)
@@ -59,5 +61,7 @@ def _register_handlers(app: Application):
     register_welcome_handlers(app)
     register_rules_handlers(app)
     register_words_handlers(app)
+    register_content_guard_handlers(app)
+    register_moderation_callback_handlers(app)
 
     logger.info("All handlers registered")
