@@ -16,7 +16,7 @@
                 <tr>
                     <th>المجموعة</th>
                     <th>المعرف</th>
-                    <th>الكلمات المحظورة</th>
+                    <th>الحالة</th>
                     <th>الإجراءات</th>
                 </tr>
             </thead>
@@ -24,22 +24,22 @@
                 {% for g in groups %}
                 <tr>
                     <td>
-                        <div style="font-weight:700;color:var(--primary);">{{ g.title or 'بدون اسم' }}</div>
-                        <div style="font-size:0.75rem;color:var(--text-muted);">{{ g.group_id }}</div>
+                        <div style="font-weight:700;color:var(--primary);">{{ g.group_name or 'بدون اسم' }}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">{{ g.group_type or 'مجموعة' }}</div>
                     </td>
                     <td><code
-                            style="font-size:0.8rem;background:var(--bg);padding:0.2rem 0.5rem;border-radius:6px;">{{ g.group_id }}</code>
+                            style="font-size:0.8rem;background:var(--bg);padding:0.2rem 0.5rem;border-radius:6px;">{{ g.telegram_group_id }}</code>
                     </td>
                     <td>
-                        <span class="badge badge-navy">{{ g.blocked_words | length }} كلمة</span>
+                        {% if g.is_active %}
+                        <span class="badge badge-success">✅ نشطة</span>
+                        {% else %}
+                        <span class="badge badge-danger">⛔ معطلة</span>
+                        {% endif %}
                     </td>
                     <td>
-                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                            <a href="/dashboard/groups/{{ g.group_id }}/words" class="btn btn-secondary btn-sm">📝
-                                الكلمات</a>
-                            <a href="/dashboard/groups/{{ g.group_id }}/settings" class="btn btn-ghost btn-sm">⚙️
-                                إعدادات</a>
-                        </div>
+                        <a href="/dashboard/groups/{{ g.telegram_group_id }}/words" class="btn btn-secondary btn-sm">📝
+                            الكلمات</a>
                     </td>
                 </tr>
                 {% endfor %}

@@ -5,51 +5,76 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">إحصائيات الذكاء الاصطناعي</h1>
-    <p class="page-subtitle">أداء كل مزود وعدد الطلبات</p>
+    <p class="page-subtitle">ملخص استخدام كل مزود — آخر 30 يوماً</p>
 </div>
 
+{% if summaries %}
+<!-- Summary cards -->
+<div class="stats-grid" style="margin-bottom:1.5rem;">
+    {% for s in summaries %}
+    <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.5rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;width:100%;">
+            <div class="stat-icon-wrap navy">🤖</div>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:0.9rem;color:var(--primary);">{{ s.label }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">اليوم: {{ s.today }} طلب</div>
+            </div>
+            <div class="stat-value" style="font-size:1.2rem;">{{ s.total }}</div>
+        </div>
+        {% if s.limit %}
+        <div style="width:100%;">
+            <div
+                style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.25rem;">
+                <span>الحصة اليومية</span>
+                <span>{{ s.today_pct }}%</span>
+            </div>
+            <div style="width:100%;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+                <div
+                    style="width:{{ s.today_pct }}%;height:100%;background:{% if s.today_pct > 80 %}var(--danger){% elif s.today_pct > 50 %}var(--warning){% else %}var(--success){% endif %};border-radius:3px;transition:width 0.5s;">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Raw stats table -->
 {% if stats %}
 <div class="card" style="padding:0;">
+    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:700;color:var(--primary);">
+        📋 سجل الطلبات التفصيلي
+    </div>
     <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
                     <th>المزود</th>
-                    <th>النموذج</th>
+                    <th>التاريخ</th>
                     <th>الطلبات</th>
-                    <th>النجاح</th>
-                    <th>الفشل</th>
-                    <th>متوسط النتيجة</th>
+                    <th>الحالة</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for s in stats %}
                 <tr>
+                    <td><span class="badge badge-navy">{{ s.provider_key }}</span></td>
+                    <td style="font-size:0.8rem;color:var(--text-muted);">{{ s.stat_date }}</td>
+                    <td><strong>{{ s.requests_count }}</strong></td>
                     <td>
-                        <span class="badge badge-navy">{{ s.provider_type }}</span>
-                    </td>
-                    <td style="font-size:0.83rem;color:var(--text-muted);direction:ltr;text-align:left;">{{ s.model }}
-                    </td>
-                    <td><strong>{{ s.total_calls }}</strong></td>
-                    <td><span class="badge badge-success">{{ s.success_calls }}</span></td>
-                    <td><span class="badge badge-danger">{{ s.error_calls }}</span></td>
-                    <td>
-                        {% if s.avg_score is not none %}
-                        <div style="display:flex;align-items:center;gap:0.5rem;">
-                            <div style="width:80px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
-                                <div
-                                    style="width:{{ (s.avg_score * 100)|int }}%;height:100%;background:{% if s.avg_score > 0.65 %}var(--danger){% elif s.avg_score > 0.4 %}var(--warning){% else %}var(--success){% endif %};border-radius:3px;">
-                                </div>
-                            </div>
-                            <span style="font-size:0.8rem;font-weight:700;">{{ '%.0f'|format(s.avg_score * 100)
-                                }}%</span>
-                        </div>
-                        {% else %}—{% endif %}
+                        {% if s.last_status == 'ok' %}
+                        <span class="badge badge-success">✅ ok</span>
+                        {% elif s.last_status %}
+                        <span class="badge badge-warning">⚠️ {{ s.last_status }}</span>
+                        {% else %}
+                        <span style="color:var(--text-muted);">—</span>
+                        {% endif %}
                     </td>
                     <td>
-                        <form method="post" action="/dashboard/ai-stats/delete/{{ s.id }}"
-                            onsubmit="return confirm('حذف السجل؟')">
+                        <form method="post" action="/dashboard/ai-stats/{{ s.id }}/delete"
+                            onsubmit="return confirm('حذف؟')">
                             <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
                         </form>
                     </td>
