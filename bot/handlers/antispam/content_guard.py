@@ -87,7 +87,7 @@ async def check_against_blacklists(normalized_text: str, chat_id: int) -> bool:
     return False
 
 
-AI_THRESHOLD = 0.80  # 80% → alert admins
+AI_THRESHOLD = 0.65  # 65% → more sensitive, catches borderline cases too
 
 
 async def send_admin_alert(
@@ -182,6 +182,7 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return  # No admin group configured, skip AI layer silently
 
     score = await ai_analyze_text(normalized)
+    logger.info(f"[GUARD-L3] AI score = {score:.2f} (threshold={AI_THRESHOLD}) for user {user.id} in {chat.id}")
     if score >= AI_THRESHOLD:
         logger.info(f"[GUARD-L3] AI score {score:.0%} for message from {user.id} in {chat.id}. Alerting admins.")
         user_name = user.full_name or user.username or str(user.id)

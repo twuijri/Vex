@@ -200,22 +200,34 @@
 <script>
     const MODEL_PRESETS = {
         google_studio: [
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-2.0-flash",
-            "gemini-2.0-pro",
+            // الأرخص والأسرع
+            { v: "gemini-2.0-flash", l: "Gemini 2.0 Flash       — مجاني · سريع جداً ⚡" },
+            { v: "gemini-2.0-flash-lite", l: "Gemini 2.0 Flash Lite  — مجاني · الأرخص 💚" },
+            { v: "gemini-1.5-flash", l: "Gemini 1.5 Flash       — مجاني · موصى به ✅" },
+            { v: "gemini-1.5-flash-8b", l: "Gemini 1.5 Flash-8B    — مجاني · صغير وسريع" },
+            // أقوى لكن أبطأ
+            { v: "gemini-1.5-pro", l: "Gemini 1.5 Pro         — مجاني · 50 طلب/يوم" },
+            { v: "gemini-2.0-pro", l: "Gemini 2.0 Pro         — مدفوع · الأقوى 💎" },
         ],
         blackbox: [
-            "blackboxai",            // الموديل الافتراضي — يعمل دائماً
-            "deepseek-v3",
-            "claude-sonnet-3.5",
-            "gpt-4o",
+            // رخيصة جداً
+            { v: "deepseek-v3", l: "DeepSeek V3            — $0.07/M · الأرخص ⭐" },
+            { v: "deepseek-r1", l: "DeepSeek R1            — $0.14/M · تفكير عميق" },
+            { v: "meta-llama/Llama-3.3-70b", l: "Llama 3.3 70B          — $0.20/M · مفتوح المصدر" },
+            { v: "meta-llama/Llama-3.1-405b", l: "Llama 3.1 405B         — $0.30/M · ضخم" },
+            // متوسطة
+            { v: "claude-3-5-haiku-20241022", l: "Claude 3.5 Haiku       — $0.25/M · سريع 🔵" },
+            { v: "gemini-1.5-flash", l: "Gemini 1.5 Flash       — $0.30/M · متوازن" },
+            { v: "gpt-4o-mini", l: "GPT-4o Mini            — $0.50/M · متوازن" },
+            // غالية (لا تستخدم للاعتدال)
+            { v: "claude-3-5-sonnet-20241022", l: "Claude 3.5 Sonnet      — $3/M  · غالي 🔴" },
+            { v: "gpt-4o", l: "GPT-4o                 — $5/M  · غالي جداً 🔴" },
         ],
         huggingface: [
-            "aubmindlab/bert-base-arabertv02",
-            "CAMeL-Lab/bert-base-arabic-camelbert-mix-sentiment",
-            "facebook/bart-large-mnli",
-            "joeddav/xlm-roberta-large-xnli",
+            { v: "aubmindlab/bert-base-arabertv02", l: "AraBERT — عربي متخصص 100% ✅" },
+            { v: "CAMeL-Lab/bert-base-arabic-camelbert-mix-sentiment", l: "CAMeL Sentiment — تحليل مشاعر عربي" },
+            { v: "facebook/bart-large-mnli", l: "BART MNLI — تصنيف عام" },
+            { v: "joeddav/xlm-roberta-large-xnli", l: "XLM-RoBERTa — متعدد اللغات" },
         ],
     };
 
@@ -226,14 +238,13 @@
 
         modelSelect.innerHTML = '';
         const presets = MODEL_PRESETS[type] || [];
-        presets.forEach(m => {
+        presets.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = m; opt.textContent = m;
+            opt.value = p.v; opt.textContent = p.l;
             modelSelect.appendChild(opt);
         });
-        if (presets.length) modelInput.value = presets[0];
+        if (presets.length) modelInput.value = presets[0].v;
 
-        // Update label for HuggingFace
         document.getElementById('model_label').textContent =
             type === 'huggingface' ? 'النموذج (HuggingFace repo/model)' : 'النموذج';
     }
