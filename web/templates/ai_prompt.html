@@ -27,20 +27,18 @@
         💡 اكتب <strong>تعليماتك فقط</strong> — البوت يُضيف <u>تلقائياً</u> في النهاية:
         الرسالة + طلب الرقم بين 0.0-1.0
     </div>
-    <form method="post" action="/dashboard/ai-prompt/save">
+    <form method="post" action="/dashboard/ai-prompt/save" id="prompt-save-form">
         <textarea class="textarea-field" name="prompt" {% if not has_providers %}disabled{% endif
             %}>{{ current_prompt }}</textarea>
-        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
-            <button type="submit" class="btn btn-primary" {% if not has_providers %}disabled{% endif %}>💾 حفظ
-                البرومبت</button>
-            <form method="post" action="/dashboard/ai-prompt/reset" style="margin:0;">
-                <button type="submit" class="btn btn-danger" {% if not has_providers %}disabled{% endif %}
-                    onclick="return confirm('إعادة الضبط إلى الافتراضي؟')">
-                    ♻️ إعادة الضبط
-                </button>
-            </form>
-        </div>
     </form>
+    <form method="post" action="/dashboard/ai-prompt/reset" id="prompt-reset-form"
+        onsubmit="return confirm('إعادة الضبط إلى الافتراضي؟')"></form>
+    <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+        <button type="submit" form="prompt-save-form" class="btn btn-primary" {% if not has_providers %}disabled{% endif
+            %}>💾 حفظ البرومبت</button>
+        <button type="submit" form="prompt-reset-form" class="btn btn-danger" {% if not has_providers %}disabled{% endif
+            %}>♻️ إعادة الضبط</button>
+    </div>
 </div>
 
 <!-- Fixed Suffix -->
