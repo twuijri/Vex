@@ -24,6 +24,7 @@ from bot.services.ai_provider_service import (
 )
 from bot.core.config import (
     load_bot_config, get_ai_prompt_override, set_ai_prompt_override,
+    get_ai_debug_channel_id, set_ai_debug_channel_id,
 )
 
 logger = logging.getLogger("vex.web.dashboard")
@@ -322,12 +323,14 @@ async def ai_prompt_page(request: Request, msg: str = ""):
         return RedirectResponse(url="/setup")
     providers = await list_providers()
     current = await get_ai_prompt_override()
+    debug_ch = await get_ai_debug_channel_id()
     return templates.TemplateResponse("ai_prompt.html", {
         "request": request,
         "bot_username": config.bot_username,
         "has_providers": bool(providers),
         "current_prompt": current or DEFAULT_PROMPT_REFERENCE,
         "default_prompt": DEFAULT_PROMPT_REFERENCE,
+        "debug_channel_id": debug_ch,
         "msg": msg,
     })
 
@@ -342,3 +345,25 @@ async def ai_prompt_save(prompt: str = Form(...)):
 async def ai_prompt_reset():
     await set_ai_prompt_override(None)
     return RedirectResponse(url="/dashboard/ai-prompt?msg=تمت إعادة الضبط إلى الافتراضي ✅", status_code=303)
+
+
+@router.post("/ai-prompt/debug-channel/save")
+async def ai_debug_channel_save(channel_id: str = Form(...)):
+    """Save the debug channel ID (numeric or @username)"""
+    raw = channel_id.strip()
+    try:
+        cid = int(raw)
+    except ValueError:
+        cid = None  # Let the bot handle @username resolution
+        # Store as string representation for now — convert on first use
+        await set_ai_debug_channel_id(None)
+        return RedirectResponse(url="/dashboard/ai-prompt?msg=أدخل معرفاً رقمياً (مثال: -100123456789)", status_code=303)
+    await set_ai_debug_channel_id(cid)
+    return RedirectResponse(url="/dashboard/ai-prompt?msg=تم حفظ قناة التتبع ✅", status_code=303)
+
+
+@router.post("/ai-prompt/debug-channel/clear")
+async def ai_debug_channel_clear():
+    """Disable the debug channel"""
+    await set_ai_debug_channel_id(None)
+    return RedirectResponse(url="/dashboard/ai-prompt?msg=تم إيقاف قناة التتبع ✅", status_code=303)

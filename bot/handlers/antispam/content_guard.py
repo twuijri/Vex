@@ -8,6 +8,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.admin_service import is_admin, get_admin_group_id
 from bot.services.group_service import is_managed_group, list_blocked_words
 from bot.services.ai_service import analyze_text as ai_analyze_text
+from bot.core.config import get_ai_debug_channel_id
 
 logger = logging.getLogger("vex.handlers.antispam.content_guard")
 
@@ -183,7 +184,9 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     score = await ai_analyze_text(normalized)
     logger.info(f"[GUARD-L3] AI score = {score:.2f} (threshold={AI_THRESHOLD}) for user {user.id} in {chat.id}")
-    if score >= AI_THRESHOLD:
+
+    action_taken = score >= AI_THRESHOLD
+    if action_taken:
         logger.info(f"[GUARD-L3] AI score {score:.0%} for message from {user.id} in {chat.id}. Alerting admins.")
         user_name = user.full_name or user.username or str(user.id)
         try:
@@ -199,6 +202,31 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
             )
         except Exception as e:
             logger.error(f"[GUARD-L3] Failed to send admin alert: {e}")
+
+    # ── Debug Channel ──────────────────────────────────────────────────────────
+    debug_ch = await get_ai_debug_channel_id()
+    if debug_ch:
+        try:
+            bar = int(score * 10)
+            bar_filled = '█' * bar + '░' * (10 - bar)
+            action_label = "🚨 تنبيه أرسل للمشرفين" if action_taken else "✅ لم يتخذ إجراء"
+            debug_text = (
+                f"🔬 *AI Debug Log*\n"
+                f"────────────────────\n"
+                f"💬 *الرسالة:* `{original_text[:300]}`\n"
+                f"📊 *النتيجة:* `{score:.2f}` / 1.0\n"
+                f"[{bar_filled}] {score*100:.0f}%\n"
+                f"⚡ *العتبة:* `{AI_THRESHOLD}`\n"
+                f"📍 *المجموعة:* `{chat.id}`\n"
+                f"🛡 *الإجراء:* {action_label}"
+            )
+            await context.bot.send_message(
+                chat_id=debug_ch,
+                text=debug_text,
+                parse_mode="Markdown",
+            )
+        except Exception as e:
+            logger.warning(f"[GUARD-DEBUG] Failed to send debug message: {e}")
 
 
 # ─── Handler Registration ─────────────────────────────────────────────────────

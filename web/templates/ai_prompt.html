@@ -189,5 +189,43 @@
         <pre
             style="background:var(--bg-hover);border-radius:8px;padding:1rem;font-size:0.8rem;direction:ltr;overflow-x:auto;color:var(--text-secondary);margin:0;">{{ default_prompt }}</pre>
     </div>
+
+    <!-- Debug Channel -->
+    <div class="prompt-card"
+        style="border-color:{% if debug_channel_id %}#6366f1{% else %}var(--border-color){% endif %};">
+        <h2 style="margin:0 0 0.5rem;font-size:1rem;">🔬 قناة التتبع (Debug Channel)</h2>
+        <p style="color:var(--text-secondary);font-size:0.88rem;margin:0 0 1rem;">
+            البوت سيُرسل لهذه القناة/المجموعة نتيجة كل تحليل يجريه الذكاء الاصطناعي:
+            الرسالة + النتيجة + شريط التقدم + الإجراء المتخذ.
+        </p>
+
+        {% if debug_channel_id %}
+        <div
+            style="background:#6366f122;border:1px solid #6366f155;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem;">
+            ✅ مُفعَّلة الآن — معرف القناة: <code style="color:#a5b4fc;">{{ debug_channel_id }}</code>
+        </div>
+        {% endif %}
+
+        <form method="post" action="/dashboard/ai-prompt/debug-channel/save"
+            style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;">
+            <input type="text" name="channel_id" value="{{ debug_channel_id or '' }}"
+                placeholder="مثال: -100123456789 أو @mychannel"
+                style="flex:1;background:var(--bg-hover);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.9rem;padding:0.6rem 1rem;outline:none;direction:ltr;"
+                required>
+            <button type="submit" class="btn-save" style="padding:0.6rem 1.2rem;font-size:0.9rem;">💾 حفظ</button>
+        </form>
+
+        {% if debug_channel_id %}
+        <form method="post" action="/dashboard/ai-prompt/debug-channel/clear"
+            onsubmit="return confirm('إيقاف قناة التتبع؟')">
+            <button type="submit" class="btn-reset" style="font-size:0.85rem;padding:0.5rem 1rem;">⛔ إيقاف
+                التتبع</button>
+        </form>
+        {% endif %}
+
+        <p style="color:var(--text-secondary);font-size:0.78rem;margin-top:0.75rem;">
+            💡 تأكد من أن البوت مُضاف للقناة/المجموعة كمشرف مع صلاحية نشر الرسائل.
+        </p>
+    </div>
 </div>
 {% endblock %}

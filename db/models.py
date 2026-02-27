@@ -29,6 +29,8 @@ class BotConfig(Base):
     is_setup_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     # Custom AI prompt — None means use the built-in default
     ai_prompt_override: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Debug channel — if set, bot forwards every AI analysis result here
+    ai_debug_channel_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

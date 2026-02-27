@@ -78,3 +78,20 @@ async def set_ai_prompt_override(prompt: Optional[str]) -> None:
         config = result.scalar_one_or_none()
         if config:
             config.ai_prompt_override = prompt
+
+
+async def get_ai_debug_channel_id() -> Optional[int]:
+    """Return the configured AI debug channel ID, or None if not set."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        return config.ai_debug_channel_id if config else None
+
+
+async def set_ai_debug_channel_id(channel_id: Optional[int]) -> None:
+    """Save or clear the AI debug channel ID."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        if config:
+            config.ai_debug_channel_id = channel_id
