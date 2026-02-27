@@ -274,12 +274,26 @@ async def get_provider_stats(days: int = 30) -> list[dict]:
 
     return [
         {
+            "id": r.id,
             "provider": r.provider_key,
             "date": r.stat_date.strftime("%Y-%m-%d"),
             "requests": r.requests_count,
             "status": r.last_status or "—",
             "last_used": r.last_used_at.strftime("%H:%M") if r.last_used_at else "—",
-            "error": (r.last_error or "")[:300],  # Truncate to 300 chars for display
+            "error": (r.last_error or "")[:300],
         }
         for r in rows
     ]
+
+
+async def delete_provider_stat(stat_id: int) -> bool:
+    """Delete a single AI provider stat row by its DB id."""
+    async with get_db() as session:
+        result = await session.execute(
+            select(AIProviderStat).where(AIProviderStat.id == stat_id)
+        )
+        stat = result.scalar_one_or_none()
+        if stat:
+            await session.delete(stat)
+            return True
+        return False

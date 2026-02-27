@@ -17,7 +17,7 @@ from bot.services.group_service import (
     add_blocked_word, get_group_by_id,
 )
 from bot.services.admin_service import list_admins
-from bot.services.ai_service import get_provider_stats
+from bot.services.ai_service import get_provider_stats, delete_provider_stat
 from bot.services.ai_provider_service import (
     list_providers, add_provider, delete_provider, toggle_provider, move_provider,
 )
@@ -154,6 +154,13 @@ async def ai_stats_page(request: Request):
         "stats": stats,
         "summaries": summaries,
     })
+
+
+@router.post("/ai-stats/{stat_id}/delete")
+async def ai_stat_delete(stat_id: int):
+    """Delete a single AI provider stat row"""
+    await delete_provider_stat(stat_id)
+    return RedirectResponse(url="/dashboard/ai-stats", status_code=303)
 
 
 # ── AI Provider Management ────────────────────────────────────────────────────
