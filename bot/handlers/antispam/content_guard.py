@@ -109,7 +109,15 @@ async def send_admin_alert(
         f"💬 الرسالة الأصلية:\n`{original_text[:300]}`"
     )
 
+    # Build a direct link to the message
+    # For private/numeric groups Telegram uses: t.me/c/{id_without_-100}/{msg_id}
+    chat_id_clean = str(chat_id).lstrip("-").removeprefix("100")
+    msg_link = f"https://t.me/c/{chat_id_clean}/{message_id}"
+
     keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔗 اذهب للرسالة", url=msg_link),
+        ],
         [
             InlineKeyboardButton(
                 "🗑️ احذف الرسالة",
