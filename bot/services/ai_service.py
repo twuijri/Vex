@@ -108,6 +108,16 @@ async def _is_daily_quota_exhausted(provider_key: str, daily_limit: int) -> bool
 
 
 # ─── Provider Callers ─────────────────────────────────────────────────────────
+# Fixed suffix always appended after the custom system instructions
+_FIXED_SUFFIX_AR = (
+    "\n\nالرسالة: \u00ab{text}\u00bb\n\n"
+    "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
+)
+_FIXED_SUFFIX_EN = (
+    "\n\nMessage: \u00ab{text}\u00bb\n\n"
+    "Reply with ONLY a decimal number between 0.0 and 1.0, nothing else."
+)
+
 
 async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     """Call Google AI Studio (Gemini) API."""
@@ -115,16 +125,19 @@ async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     genai.configure(api_key=api_key)
     gemini_model = genai.GenerativeModel(model or "gemini-1.5-flash")
 
-    DEFAULT_PROMPT = (
+    DEFAULT_SYSTEM = (
         "أنت نظام كشف المحتوى المسيء في مجموعات التيليجرام. "
         "قيّم الرسالة التالية على مقياس من 0.0 إلى 1.0 حيث:\n"
-        "- 0.0 = رسالة طبيعية تماماً\n"
-        "- 1.0 = رسالة مسيئة جداً (شتم، تحرش، محتوى ضار)\n\n"
-        "الرسالة: «{text}»\n\n"
-        "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
+        "- 0.0 = رسالة طبيعية تماما\u0646\n"
+        "- 1.0 = رسالة مسيئة جدا\u064b (شتم، تحرش، محتوى ضار)"
     )
     custom = await get_ai_prompt_override()
-    prompt = (custom or DEFAULT_PROMPT).replace("{text}", text[:500])
+    if custom:
+        # User wrote system instructions only — append fixed text+score suffix
+        prompt = custom + _FIXED_SUFFIX_AR.replace("{text}", text[:500])
+    else:
+        # Full default prompt
+        prompt = DEFAULT_SYSTEM + _FIXED_SUFFIX_AR.replace("{text}", text[:500])
     response = await gemini_model.generate_content_async(prompt)
     raw = response.text.strip().replace(",", ".")
     return max(0.0, min(1.0, float(raw.split()[0])))
@@ -137,16 +150,17 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
         api_key=api_key,
         base_url="https://api.blackbox.ai",  # Correct base URL (no /api/v1)
     )
-    DEFAULT_PROMPT = (
+    DEFAULT_SYSTEM = (
         "You are an Arabic content moderation system for Telegram groups. "
         "Rate the following message on a scale from 0.0 to 1.0 where:\n"
         "- 0.0 = completely normal message\n"
-        "- 1.0 = highly abusive (insults, harassment, harmful content)\n\n"
-        "Message: «{text}»\n\n"
-        "Reply with ONLY a decimal number between 0.0 and 1.0, nothing else."
+        "- 1.0 = highly abusive (insults, harassment, harmful content)"
     )
     custom = await get_ai_prompt_override()
-    prompt = (custom or DEFAULT_PROMPT).replace("{text}", text[:500])
+    if custom:
+        prompt = custom + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
+    else:
+        prompt = DEFAULT_SYSTEM + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
     response = await client.chat.completions.create(
         model=model or "blackboxai",
         messages=[{"role": "user", "content": prompt}],

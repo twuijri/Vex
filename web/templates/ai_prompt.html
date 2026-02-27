@@ -156,8 +156,9 @@
         <h2 style="margin:0 0 1rem;font-size:1rem;">📝 البرومبت الحالي</h2>
 
         <div class="hint-box">
-            💡 استخدم <code>{text}</code> كمكان الرسالة في برومبتك.
-            مثال: <code>قيّم الرسالة التالية: {text} — أجب برقم 0.0-1.0 فقط.</code>
+            💡 اكتب <strong>تعليماتك فقط</strong> — البوت يُضيف <u>تلقائياً</u> في نهاية برومبتك:
+            <code>الرسالة: «...»</code> + <code>أجب برقم 0.0-1.0 فقط</code>
+            — لا تحتاج لإضافتهم.
         </div>
 
         <form method="post" action="/dashboard/ai-prompt/save">
@@ -183,9 +184,18 @@
         </form>
     </div>
 
-    <!-- Default prompt reference -->
+    <div class="prompt-card" style="border-color:#6366f133;">
+        <h2 style="margin:0 0 1rem;font-size:1rem;">📋 ما يُضاف تلقائياً بعد تعليماتك (ثابت)</h2>
+        <pre
+            style="background:#6366f111;border:1px solid #6366f133;border-radius:8px;padding:1rem;font-size:0.85rem;direction:ltr;color:#a5b4fc;margin:0;">الرسالة: «[...نص الرسالة...]»
+أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر.</pre>
+        <p style="color:var(--text-secondary);font-size:0.8rem;margin:0.75rem 0 0;">تُضاف هذه الأسطر بعد تعليماتك دائماً
+            — لا تحتاج لكتابتها.</p>
+    </div>
+
+    <!-- Default instructions reference -->
     <div class="prompt-card">
-        <h2 style="margin:0 0 1rem;font-size:1rem;">📋 البرومبت الافتراضي (للرجوع إليه)</h2>
+        <h2 style="margin:0 0 1rem;font-size:1rem;">📋 التعليمات الافتراضية (للرجوع إليها)</h2>
         <pre
             style="background:var(--bg-hover);border-radius:8px;padding:1rem;font-size:0.8rem;direction:ltr;overflow-x:auto;color:var(--text-secondary);margin:0;">{{ default_prompt }}</pre>
     </div>
