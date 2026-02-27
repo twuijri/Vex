@@ -1,22 +1,13 @@
-"""
-Vex - Content Guard
-Multi-layer Arabic content moderation system.
-
-Layer 1: Text Normalization (PyArabic + re)
-Layer 2: Exact Blacklist Match → instant delete
-Layer 3: AI Analysis (Dummy) → alert admins for review
-"""
 import logging
-import random
 import re
 import unicodedata
-from functools import lru_cache
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMemberAdministrator, ChatMemberOwner
 from telegram.ext import Application, MessageHandler, ContextTypes, filters
 
 from bot.services.admin_service import is_admin, get_admin_group_id
 from bot.services.group_service import is_managed_group, list_blocked_words
+from bot.services.ai_service import analyze_text as ai_analyze_text
 
 logger = logging.getLogger("vex.handlers.antispam.content_guard")
 
@@ -95,19 +86,6 @@ async def check_against_blacklists(normalized_text: str, chat_id: int) -> bool:
             return True
 
     return False
-
-
-# ─── Layer 3: AI Analysis (Dummy) ────────────────────────────────────────────
-
-async def analyze_with_ai(normalized_text: str) -> float:
-    """
-    Dummy AI analysis function.
-    Returns a float between 0.0 and 1.0 representing the abuse probability.
-
-    TODO: Replace with AraBERT / CAMeLBERT / Gemini API for production.
-    """
-    # Dummy: returns a random score weighted towards low values
-    return random.uniform(0.0, 1.0)
 
 
 AI_THRESHOLD = 0.80  # 80% → alert admins
@@ -204,7 +182,7 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
     if not admin_group_id:
         return  # No admin group configured, skip AI layer silently
 
-    score = await analyze_with_ai(normalized)
+    score = await ai_analyze_text(normalized)
     if score >= AI_THRESHOLD:
         logger.info(f"[GUARD-L3] AI score {score:.0%} for message from {user.id} in {chat.id}. Alerting admins.")
         user_name = user.full_name or user.username or str(user.id)

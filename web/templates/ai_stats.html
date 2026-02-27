@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Vex — إحصائيات الذكاء الاصطناعي{% endblock %}
+
+{% block head %}
+<style>
+    .ai-stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .ai-stats-table th {
+        background: var(--bg-hover);
+        padding: 0.85rem 1rem;
+        text-align: right;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .ai-stats-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+    }
+
+    .ai-stats-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .ai-stats-table tr:hover td {
+        background: var(--bg-hover);
+    }
+
+    /* Status badges */
+    .badge {
+        display: inline-block;
+        padding: 0.2rem 0.65rem;
+        border-radius: 99px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-ok {
+        background: #16a34a22;
+        color: #4ade80;
+    }
+
+    .badge-ratelimit {
+        background: #d9770622;
+        color: #fb923c;
+    }
+
+    .badge-error {
+        background: #dc262622;
+        color: #f87171;
+    }
+
+    .badge-day {
+        background: #7c3aed22;
+        color: #a78bfa;
+    }
+
+    /* Summary cards */
+    .provider-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .provider-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.2rem 1.5rem;
+    }
+
+    .provider-card .p-name {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.4rem;
+    }
+
+    .provider-card .p-count {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        line-height: 1;
+    }
+
+    .provider-card .p-sub {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 0.3rem;
+    }
+
+    /* Bar strip */
+    .usage-bar-wrap {
+        height: 6px;
+        background: var(--bg-hover);
+        border-radius: 99px;
+        margin-top: 0.6rem;
+        overflow: hidden;
+    }
+
+    .usage-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        border-radius: 99px;
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block nav %}
+<nav class="navbar">
+    <div class="nav-brand">
+        <span class="nav-logo">🤖</span>
+        <span class="nav-title">Vex</span>
+        <span class="nav-badge">@{{ bot_username }}</span>
+    </div>
+    <div class="nav-links">
+        <a href="/dashboard/" class="nav-link">📊 لوحة التحكم</a>
+        <a href="/dashboard/groups" class="nav-link">👥 المجموعات</a>
+        <a href="/dashboard/users" class="nav-link">👤 المستخدمين</a>
+        <a href="/dashboard/logs" class="nav-link">📑 السجلات</a>
+        <a href="/dashboard/ai-stats" class="nav-link active">🤖 الذكاء الاصطناعي</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">🤖 إحصائيات الذكاء الاصطناعي — آخر 30 يوم</h1>
+
+    {% if not summaries %}
+    <div class="empty-state">
+        <div class="empty-icon">🌙</div>
+        <div class="empty-text">لا توجد بيانات بعد — ستظهر الإحصائيات بعد أول رسالة يحللها الذكاء الاصطناعي.</div>
+    </div>
+    {% else %}
+
+    <!-- Summary Cards -->
+    <div class="provider-summary">
+        {% for s in summaries %}
+        <div class="provider-card">
+            <div class="p-name">{{ s.label }}</div>
+            <div class="p-count">{{ s.total }}</div>
+            <div class="p-sub">طلب في آخر 30 يوم</div>
+            {% if s.limit %}
+            <div class="usage-bar-wrap">
+                <div class="usage-bar" style="width: {{ [s.today_pct, 100]|min }}%"></div>
+            </div>
+            <div class="p-sub">اليوم: {{ s.today }} / {{ s.limit }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Detailed Table -->
+    <div class="log-container" style="height: auto;">
+        <div class="log-header">
+            <strong>📋 سجل التفصيلي</strong>
+            <a href="/dashboard/ai-stats" class="btn-refresh">🔄 تحديث</a>
+        </div>
+        <table class="ai-stats-table">
+            <thead>
+                <tr>
+                    <th>المزوّد</th>
+                    <th>التاريخ</th>
+                    <th>طلبات</th>
+                    <th>الحالة</th>
+                    <th>آخر استخدام</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in stats %}
+                <tr>
+                    <td><strong>{{ row.provider }}</strong></td>
+                    <td>{{ row.date }}</td>
+                    <td>{{ row.requests }}</td>
+                    <td>
+                        {% if row.status == 'ok' %}
+                        <span class="badge badge-ok">✅ ناجح</span>
+                        {% elif row.status == 'rate_limit_minute' %}
+                        <span class="badge badge-ratelimit">⏳ حد الدقيقة</span>
+                        {% elif row.status == 'rate_limit_day' %}
+                        <span class="badge badge-day">🚫 حد اليوم</span>
+                        {% elif row.status == 'error' %}
+                        <span class="badge badge-error">❌ خطأ</span>
+                        {% else %}
+                        <span class="badge">{{ row.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.last_used }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

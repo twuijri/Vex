@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from sqlalchemy import (
-    BigInteger, Boolean, DateTime, ForeignKey, Integer, JSON,
+    BigInteger, Boolean, Date, DateTime, ForeignKey, Float, Integer, JSON,
     String, Text, func
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -225,3 +225,18 @@ class SupportMessage(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="support_messages")
+
+
+class AIProviderStat(Base):
+    """Daily usage statistics per AI provider key"""
+    __tablename__ = "ai_provider_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Provider name: 'gemini_1', 'gemini_2', 'gemini_3', 'huggingface'
+    provider_key: Mapped[str] = mapped_column(String(50), index=True)
+    stat_date: Mapped[datetime] = mapped_column(Date, index=True)
+    requests_count: Mapped[int] = mapped_column(Integer, default=0)
+    # 'ok', 'rate_limit_minute', 'rate_limit_day', 'error'
+    last_status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

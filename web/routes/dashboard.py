@@ -13,6 +13,7 @@ from bot.core.config import load_bot_config
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
 from bot.services.group_service import get_group_count, list_managed_groups
 from bot.services.admin_service import list_admins
+from bot.services.ai_service import get_provider_stats
 
 logger = logging.getLogger("vex.web.dashboard")
 
@@ -96,4 +97,53 @@ async def logs_page(request: Request):
         "request": request,
         "bot_username": config.bot_username,
         "logs": log_content,
+    })
+
+
+@router.get("/ai-stats", response_class=HTMLResponse)
+async def ai_stats_page(request: Request):
+    """AI provider usage statistics dashboard"""
+    config = await load_bot_config()
+    if not config or not config.is_setup_complete:
+        return RedirectResponse(url="/setup")
+
+    stats = await get_provider_stats(days=30)
+
+    # Build per-provider summary (today totals + 30-day totals)
+    from datetime import date
+    today_str = date.today().strftime("%Y-%m-%d")
+    DAILY_LIMIT = 1450
+
+    provider_labels = {
+        "gemini_1": "Gemini Key 1",
+        "gemini_2": "Gemini Key 2",
+        "gemini_3": "Gemini Key 3",
+        "huggingface": "HuggingFace",
+    }
+
+    totals: dict[str, dict] = {}
+    for row in stats:
+        key = row["provider"]
+        if key not in totals:
+            totals[key] = {"total": 0, "today": 0, "label": provider_labels.get(key, key)}
+        totals[key]["total"] += row["requests"]
+        if row["date"] == today_str:
+            totals[key]["today"] += row["requests"]
+
+    summaries = []
+    for key, data in totals.items():
+        limit = DAILY_LIMIT if "gemini" in key else None
+        summaries.append({
+            "label": data["label"],
+            "total": data["total"],
+            "today": data["today"],
+            "limit": limit,
+            "today_pct": round((data["today"] / limit) * 100) if limit else 0,
+        })
+
+    return templates.TemplateResponse("ai_stats.html", {
+        "request": request,
+        "bot_username": config.bot_username,
+        "stats": stats,
+        "summaries": summaries,
     })
