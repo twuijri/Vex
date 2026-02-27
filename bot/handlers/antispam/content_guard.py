@@ -12,25 +12,10 @@ from bot.services.ai_service import analyze_text as ai_analyze_text
 logger = logging.getLogger("vex.handlers.antispam.content_guard")
 
 # ─── Global Fallback Blacklist ────────────────────────────────────────────────
-# Hardcoded globally prohibited words — always deleted regardless of group settings.
-# These go through Layer 1 normalization before matching, so variations are caught.
-GLOBAL_BLACKLIST: list[str] = [
-    # إهانات وشتائم شائعة
-    "حيوان",
-    "كلب",
-    "خنزير",
-    "حمار",
-    "غبي",
-    "احمق",
-    "تافه",
-    "يلعن",
-    "ابن الكلب",
-    "يا كلب",
-    "يا حمار",
-    "يا حيوان",
-    "يا غبي",
-    # Add more words as needed
-]
+# ⚠️ تعمداً فارغة — إدارة الكلمات المحظورة تتم من لوحة التحكم لكل مجموعة على حدة.
+# لا تضيف كلمات هنا، فكلمة مثل "كلب" قد تكون طبيعية في مجموعة حيوانات أليفة.
+GLOBAL_BLACKLIST: list[str] = []
+
 
 
 # ─── Layer 1: Text Normalization ─────────────────────────────────────────────
