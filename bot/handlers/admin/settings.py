@@ -15,6 +15,8 @@ from bot.services.group_service import (
     list_managed_groups, get_managed_group, deactivate_group,
     toggle_media_setting, get_group_media_setting,
 )
+from bot.services.ai_provider_service import list_providers
+from bot.core.config import get_ai_prompt_override, set_ai_prompt_override
 
 logger = logging.getLogger("vex.handlers.admin.settings")
 
@@ -53,11 +55,18 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(user.id):
         return
 
-    keyboard = InlineKeyboardMarkup([
+    # Check if any AI provider is configured
+    providers = await list_providers()
+    has_providers = bool(providers)
+
+    ai_btn_text = "✏️ برومبت الذكاء الاصطناعي" if has_providers else "✏️ برومبت الذكاء الاصطناعي ⛔"
+    keyboard_rows = [
         [InlineKeyboardButton("📋 اعدادات المجموعات", callback_data="settings_groups")],
         [InlineKeyboardButton("🤖 اعدادات البوت", callback_data="settings_bot")],
+        [InlineKeyboardButton(ai_btn_text, callback_data="settings_ai_prompt")],
         [InlineKeyboardButton("❌ الخروج من الإعدادات", callback_data="exit_settings")],
-    ])
+    ]
+    keyboard = InlineKeyboardMarkup(keyboard_rows)
     await update.effective_message.reply_text(
         "⚙️ **الاعدادات**", reply_markup=keyboard, parse_mode="Markdown"
     )
@@ -253,6 +262,41 @@ async def noop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
 
 
+async def settings_ai_prompt_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show current AI prompt status and link to dashboard editor"""
+    query = update.callback_query
+    await query.answer()
+
+    providers = await list_providers()
+    if not providers:
+        await query.edit_message_text(
+            "⛔ **برومبت الذكاء الاصطناعي**\n\n"
+            "لا يمكن تعديل البرومبت حتى تُضيف مزود ذكاء اصطناعي واحداً على الأقل.\n\n"
+            "أضف مزوداً من لوحة التحكم: `/dashboard/ai-providers`",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 رجوع", callback_data="back_main_settings")],
+            ]),
+            parse_mode="Markdown",
+        )
+        return
+
+    current = await get_ai_prompt_override()
+    status = "✅ مُخصَّص" if current else "🔄 افتراضي"
+    preview = (current or "")[:200] + ("…" if current and len(current) > 200 else "")
+
+    await query.edit_message_text(
+        f"✏️ **برومبت الذكاء الاصطناعي**\n\n"
+        f"الحالة: {status}\n\n"
+        f"{'```' + preview + '```' if preview else '(يستخدم البرومبت الافتراضي المدمج)'}\n\n"
+        "لتعديل البرومبت أو إعادة ضبطه، افتح لوحة التحكم:",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("✏️ فتح المحرر في لوحة التحكم", url="/dashboard/ai-prompt")],
+            [InlineKeyboardButton("🔙 رجوع", callback_data="back_main_settings")],
+        ]),
+        parse_mode="Markdown",
+    )
+
+
 def register_settings_handlers(app: Application):
     """Register settings handlers"""
     app.add_handler(MessageHandler(filters.Regex(r"^[/#]?(الاعدادات|settings)(?:@\S+)?(?:\s|$)"), settings_command))
@@ -265,3 +309,4 @@ def register_settings_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(back_main_settings_callback, pattern=r"^back_main_settings$"))
     app.add_handler(CallbackQueryHandler(exit_settings_callback, pattern=r"^exit_settings$"))
     app.add_handler(CallbackQueryHandler(noop_callback, pattern=r"^noop$"))
+    app.add_handler(CallbackQueryHandler(settings_ai_prompt_callback, pattern=r"^settings_ai_prompt$"))

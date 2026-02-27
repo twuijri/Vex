@@ -16,6 +16,7 @@ from sqlalchemy import select, and_
 
 from db.database import get_db
 from db.models import AIProviderStat, AIProvider
+from bot.core.config import get_ai_prompt_override
 
 logger = logging.getLogger("vex.services.ai")
 
@@ -114,14 +115,16 @@ async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     genai.configure(api_key=api_key)
     gemini_model = genai.GenerativeModel(model or "gemini-1.5-flash")
 
-    prompt = (
+    DEFAULT_PROMPT = (
         "أنت نظام كشف المحتوى المسيء في مجموعات التيليجرام. "
         "قيّم الرسالة التالية على مقياس من 0.0 إلى 1.0 حيث:\n"
         "- 0.0 = رسالة طبيعية تماماً\n"
         "- 1.0 = رسالة مسيئة جداً (شتم، تحرش، محتوى ضار)\n\n"
-        f"الرسالة: «{text[:500]}»\n\n"
+        "الرسالة: «{text}»\n\n"
         "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
     )
+    custom = await get_ai_prompt_override()
+    prompt = (custom or DEFAULT_PROMPT).replace("{text}", text[:500])
     response = await gemini_model.generate_content_async(prompt)
     raw = response.text.strip().replace(",", ".")
     return max(0.0, min(1.0, float(raw.split()[0])))
@@ -134,14 +137,16 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
         api_key=api_key,
         base_url="https://api.blackbox.ai",  # Correct base URL (no /api/v1)
     )
-    prompt = (
+    DEFAULT_PROMPT = (
         "You are an Arabic content moderation system for Telegram groups. "
         "Rate the following message on a scale from 0.0 to 1.0 where:\n"
         "- 0.0 = completely normal message\n"
         "- 1.0 = highly abusive (insults, harassment, harmful content)\n\n"
-        f"Message: «{text[:500]}»\n\n"
+        "Message: «{text}»\n\n"
         "Reply with ONLY a decimal number between 0.0 and 1.0, nothing else."
     )
+    custom = await get_ai_prompt_override()
+    prompt = (custom or DEFAULT_PROMPT).replace("{text}", text[:500])
     response = await client.chat.completions.create(
         model=model or "blackboxai",
         messages=[{"role": "user", "content": prompt}],

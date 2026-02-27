@@ -61,3 +61,20 @@ async def mark_setup_complete() -> None:
         config = result.scalar_one_or_none()
         if config:
             config.is_setup_complete = True
+
+
+async def get_ai_prompt_override() -> Optional[str]:
+    """Return the custom AI prompt if set, otherwise None (use built-in default)."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        return config.ai_prompt_override if config else None
+
+
+async def set_ai_prompt_override(prompt: Optional[str]) -> None:
+    """Save a custom AI prompt. Pass None to reset to default."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        if config:
+            config.ai_prompt_override = prompt

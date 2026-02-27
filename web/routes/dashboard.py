@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 import os
 import httpx
 
-from bot.core.config import load_bot_config
+
 from bot.services.user_service import get_user_count, get_blocked_count, list_blocked_users
 from bot.services.group_service import (
     get_group_count, list_managed_groups,
@@ -21,6 +21,9 @@ from bot.services.admin_service import list_admins
 from bot.services.ai_service import get_provider_stats, delete_provider_stat
 from bot.services.ai_provider_service import (
     list_providers, add_provider, delete_provider, toggle_provider, move_provider,
+)
+from bot.core.config import (
+    load_bot_config, get_ai_prompt_override, set_ai_prompt_override,
 )
 
 logger = logging.getLogger("vex.web.dashboard")
@@ -298,3 +301,44 @@ async def group_words_delete(group_id: int, word_id: int):
         url=f"/dashboard/groups/{group_id}/words",
         status_code=303,
     )
+
+
+# ── AI Prompt Editor ──────────────────────────────────────────────────────────
+
+DEFAULT_PROMPT_REFERENCE = (
+    "أنت نظام كشف المحتوى المسيء في مجموعات التيليجرام.\n"
+    "قيّم الرسالة التالية على مقياس من 0.0 إلى 1.0 حيث:\n"
+    "- 0.0 = رسالة طبيعية تماماً\n"
+    "- 1.0 = رسالة مسيئة جداً (شتم، تحرش، محتوى ضار)\n\n"
+    "الرسالة: «{text}»\n\n"
+    "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
+)
+
+
+@router.get("/ai-prompt", response_class=HTMLResponse)
+async def ai_prompt_page(request: Request, msg: str = ""):
+    config = await load_bot_config()
+    if not config or not config.is_setup_complete:
+        return RedirectResponse(url="/setup")
+    providers = await list_providers()
+    current = await get_ai_prompt_override()
+    return templates.TemplateResponse("ai_prompt.html", {
+        "request": request,
+        "bot_username": config.bot_username,
+        "has_providers": bool(providers),
+        "current_prompt": current or DEFAULT_PROMPT_REFERENCE,
+        "default_prompt": DEFAULT_PROMPT_REFERENCE,
+        "msg": msg,
+    })
+
+
+@router.post("/ai-prompt/save")
+async def ai_prompt_save(prompt: str = Form(...)):
+    await set_ai_prompt_override(prompt.strip() or None)
+    return RedirectResponse(url="/dashboard/ai-prompt?msg=تم حفظ البرومبت بنجاح ✅", status_code=303)
+
+
+@router.post("/ai-prompt/reset")
+async def ai_prompt_reset():
+    await set_ai_prompt_override(None)
+    return RedirectResponse(url="/dashboard/ai-prompt?msg=تمت إعادة الضبط إلى الافتراضي ✅", status_code=303)
