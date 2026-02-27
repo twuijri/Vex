@@ -177,6 +177,7 @@
                     <th>طلبات</th>
                     <th>الحالة</th>
                     <th>آخر استخدام</th>
+                    <th>رسالة الخطأ الكاملة</th>
                 </tr>
             </thead>
             <tbody>
@@ -199,6 +200,9 @@
                         {% endif %}
                     </td>
                     <td>{{ row.last_used }}</td>
+                    <td style="font-size:0.75rem;color:var(--text-secondary);max-width:300px;word-break:break-all;">
+                        {{ row.error or '—' }}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
