@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: vex
+    restart: unless-stopped
+    ports:
+      - "8089:8080"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vex:vex_secret@db:5432/vex_db
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=8080
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-admin}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
+    networks:
+      - default
+      - npm_network
+
+  db:
+    image: postgres:16-alpine
+    container_name: vex_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=vex
+      - POSTGRES_PASSWORD=vex_secret
+      - POSTGRES_DB=vex_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U vex -d vex_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  app_data:
+
+
+networks:
+  default:
+  npm_network:
+    external: true
+    name: ${NPM_NETWORK:-nginx-proxy-manager_default}

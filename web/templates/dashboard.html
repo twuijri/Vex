@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Vex — لوحة التحكم{% endblock %}
+{% block page_title %}📊 لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">أهلاً بك في Vex 👋</h1>
+    <p class="page-subtitle">نظرة عامة على البوت والمجموعات</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon-wrap navy">👤</div>
+        <div>
+            <div class="stat-value">{{ user_count }}</div>
+            <div class="stat-label">إجمالي المستخدمين</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon-wrap gold">👥</div>
+        <div>
+            <div class="stat-value">{{ group_count }}</div>
+            <div class="stat-label">المجموعات المُدارة</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon-wrap red">🚫</div>
+        <div>
+            <div class="stat-value">{{ blocked_count }}</div>
+            <div class="stat-label">المحظورون</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon-wrap green">🛡️</div>
+        <div>
+            <div class="stat-value">{{ admin_count }}</div>
+            <div class="stat-label">المشرفون</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:1rem;">⚡ وصول سريع</h2>
+    <div class="actions-grid">
+        <a href="/dashboard/groups" class="action-card">
+            <span class="action-icon">📋</span>
+            <span class="action-label">إدارة المجموعات</span>
+        </a>
+        <a href="/dashboard/users" class="action-card">
+            <span class="action-icon">🚫</span>
+            <span class="action-label">المحظورون</span>
+        </a>
+        <a href="/dashboard/ai-providers" class="action-card">
+            <span class="action-icon">🤖</span>
+            <span class="action-label">مزودو الذكاء</span>
+        </a>
+        <a href="/dashboard/ai-stats" class="action-card">
+            <span class="action-icon">📈</span>
+            <span class="action-label">إحصائيات AI</span>
+        </a>
+        <a href="/dashboard/ai-prompt" class="action-card">
+            <span class="action-icon">✏️</span>
+            <span class="action-label">محرر البرومبت</span>
+        </a>
+        <a href="/dashboard/logs" class="action-card">
+            <span class="action-icon">📑</span>
+            <span class="action-label">سجلات النظام</span>
+        </a>
+    </div>
+</div>
+{% endblock %}
