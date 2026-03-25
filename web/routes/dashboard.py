@@ -3,11 +3,12 @@ Vex - Dashboard Routes
 Admin dashboard with stats and management
 """
 import logging
+import os
+import secrets
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-import os
 import httpx
 
 
@@ -204,6 +205,91 @@ async def fetch_provider_models(
         return JSONResponse({"models": sorted(models)})
     except Exception as e:
         return JSONResponse({"models": [], "error": str(e)}, status_code=200)
+
+
+# ── GitHub Copilot OAuth ─────────────────────────────────────────────────────
+
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+
+# In-memory state store (per-process; fine for single-instance dashboard)
+_oauth_states: dict[str, str] = {}  # state -> "pending"
+
+
+@router.get("/ai-providers/github-copilot/connect")
+async def github_copilot_connect(request: Request, name: str = "GitHub Copilot", model: str = "gpt-4o", priority: int = 10):
+    """Start GitHub OAuth flow for Copilot."""
+    if not GITHUB_CLIENT_ID:
+        return RedirectResponse(
+            url="/dashboard/ai-providers?msg=❌ GITHUB_CLIENT_ID غير مضبوط في متغيرات البيئة",
+            status_code=303,
+        )
+    state = secrets.token_urlsafe(16)
+    _oauth_states[state] = f"{name}||{model}||{priority}"
+
+    params = (
+        f"client_id={GITHUB_CLIENT_ID}"
+        f"&scope=copilot"
+        f"&state={state}"
+        f"&allow_signup=false"
+    )
+    return RedirectResponse(
+        url=f"https://github.com/login/oauth/authorize?{params}",
+        status_code=302,
+    )
+
+
+@router.get("/ai-providers/github-copilot/callback")
+async def github_copilot_callback(code: str = "", state: str = "", error: str = ""):
+    """Handle GitHub OAuth callback and save provider."""
+    if error:
+        return RedirectResponse(
+            url=f"/dashboard/ai-providers?msg=❌ رفض المستخدم الإذن: {error}",
+            status_code=303,
+        )
+
+    saved = _oauth_states.pop(state, None)
+    if not saved:
+        return RedirectResponse(
+            url="/dashboard/ai-providers?msg=❌ state غير صالح أو منتهي الصلاحية",
+            status_code=303,
+        )
+
+    name, model, priority_str = saved.split("||")
+
+    # Exchange code for access token
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": GITHUB_CLIENT_ID,
+                "client_secret": GITHUB_CLIENT_SECRET,
+                "code": code,
+            },
+        )
+        data = resp.json()
+
+    access_token = data.get("access_token", "")
+    if not access_token:
+        err = data.get("error_description", str(data))
+        return RedirectResponse(
+            url=f"/dashboard/ai-providers?msg=❌ فشل الحصول على التوكن: {err}",
+            status_code=303,
+        )
+
+    # Save provider with OAuth token as api_key
+    await add_provider(
+        name=name,
+        provider_type="github_copilot",
+        api_key=access_token,
+        model=model,
+        priority=int(priority_str),
+    )
+    return RedirectResponse(
+        url="/dashboard/ai-providers?msg=✅ تم ربط GitHub Copilot بنجاح",
+        status_code=303,
+    )
 
 
 # ── AI Provider Management ────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ DAILY_LIMITS: dict[str, int] = {
     "google_studio": 1450,
     "blackbox": 99999,      # No known hard limit; use credit balance
     "huggingface": 99999,   # No hard daily limit
+    "github_copilot": 99999,  # Rate-limited by GitHub plan
 }
 
 # Keywords that indicate DAILY quota exhaustion (not just per-minute rate limit)
@@ -170,6 +171,63 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
     return max(0.0, min(1.0, float(raw.split()[0])))
 
 
+async def _call_github_copilot(oauth_token: str, model: str, text: str) -> float:
+    """Call GitHub Copilot API using an OAuth access token.
+    
+    Flow:
+      1. Exchange OAuth token for a short-lived Copilot session token.
+      2. Call the OpenAI-compatible Copilot completions endpoint.
+    """
+    import httpx
+
+    # Step 1: Get a short-lived Copilot session token
+    headers_gh = {
+        "Authorization": f"token {oauth_token}",
+        "Accept": "application/json",
+        "Editor-Version": "vscode/1.85.0",
+        "Editor-Plugin-Version": "copilot/1.155.0",
+        "User-Agent": "GithubCopilot/1.155.0",
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        token_resp = await client.get(
+            "https://api.github.com/copilot_internal/v2/token",
+            headers=headers_gh,
+        )
+        token_resp.raise_for_status()
+        copilot_token = token_resp.json()["token"]
+
+        # Step 2: Call Copilot completions (OpenAI-compatible)
+        DEFAULT_SYSTEM = (
+            "You are an Arabic content moderation system for Telegram groups. "
+            "Rate the following message on a scale from 0.0 to 1.0 where:\n"
+            "- 0.0 = completely normal message\n"
+            "- 1.0 = highly abusive (insults, harassment, harmful content)"
+        )
+        custom = await get_ai_prompt_override()
+        prompt = (custom if custom else DEFAULT_SYSTEM) + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
+
+        resp = await client.post(
+            "https://api.githubcopilot.com/chat/completions",
+            headers={
+                "Authorization": f"Bearer {copilot_token}",
+                "Content-Type": "application/json",
+                "Editor-Version": "vscode/1.85.0",
+                "Editor-Plugin-Version": "copilot/1.155.0",
+                "User-Agent": "GithubCopilot/1.155.0",
+                "Copilot-Integration-Id": "vscode-chat",
+            },
+            json={
+                "model": model or "gpt-4o",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 10,
+                "temperature": 0,
+            },
+        )
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip().replace(",", ".")
+        return max(0.0, min(1.0, float(raw.split()[0])))
+
+
 async def _call_huggingface(api_key: str, model: str, text: str) -> float:
     """Call HuggingFace Inference API with zero-shot classification."""
     import httpx
@@ -203,6 +261,8 @@ async def _call_provider(provider: AIProvider, text: str) -> float:
         return await _call_blackbox(provider.api_key, provider.model, text)
     elif provider.provider_type == "huggingface":
         return await _call_huggingface(provider.api_key, provider.model, text)
+    elif provider.provider_type == "github_copilot":
+        return await _call_github_copilot(provider.api_key, provider.model, text)
     raise ValueError(f"Unknown provider type: {provider.provider_type}")
 
 

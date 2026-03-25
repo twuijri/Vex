@@ -51,10 +51,24 @@
             { label: "CAMeL BERT", value: "CAMeL-Lab/bert-base-arabic-camelbert-mix" },
         ],
         blackbox: [{ label: "(جلب تلقائي)", value: "" }],
+        github_copilot: [
+            { label: "GPT-4o", value: "gpt-4o" },
+            { label: "GPT-4", value: "gpt-4" },
+            { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
+            { label: "Claude 3.5 Sonnet", value: "claude-3.5-sonnet" },
+            { label: "o1-mini", value: "o1-mini" },
+        ],
     };
     function onTypeChange() {
         const type = document.getElementById("provider_type").value;
-        document.getElementById("api_key_input").placeholder = type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API";
+        const isCopilot = type === "github_copilot";
+        document.getElementById("api_key_row").style.display = isCopilot ? "none" : "";
+        document.getElementById("copilot_connect_row").style.display = isCopilot ? "" : "none";
+        document.getElementById("submit_add_btn").style.display = isCopilot ? "none" : "";
+        document.getElementById("api_key_input").required = !isCopilot;
+        if (!isCopilot) {
+            document.getElementById("api_key_input").placeholder = type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API";
+        }
         populatePresets(type);
     }
     function populatePresets(type) {
@@ -88,6 +102,12 @@
         } catch (e) { alert("خطأ في الاتصال"); }
         btn.disabled = false; btn.textContent = "🔍 جلب الموديلات";
     }
+    function buildCopilotUrl() {
+        const name = encodeURIComponent(document.getElementById("provider_name").value || "GitHub Copilot");
+        const model = encodeURIComponent(document.getElementById("model").value || "gpt-4o");
+        const priority = encodeURIComponent(document.getElementById("priority_input").value || "10");
+        window.location.href = `/dashboard/ai-providers/github-copilot/connect?name=${name}&model=${model}&priority=${priority}`;
+    }
     window.onload = () => populatePresets(document.getElementById("provider_type").value);
 </script>
 {% endblock %}
@@ -98,10 +118,18 @@
     <p class="page-subtitle">يُجرَّب المزودون بالترتيب — إذا فشل أحدهم انتقل للتالي تلقائياً</p>
 </div>
 
+{% set msg = request.query_params.get('msg', '') %}
+{% if msg %}
+<div class="alert" style="margin-bottom:1rem;padding:0.75rem 1rem;border-radius:8px;
+    background:{% if '✅' in msg %}rgba(56,200,96,.15){% else %}rgba(220,50,50,.15){% endif %};
+    border:1px solid {% if '✅' in msg %}#38c860{% else %}#dc3232{% endif %};
+    color:{% if '✅' in msg %}#38c860{% else %}#ff6b6b{% endif %};font-size:.9rem;">{{ msg }}</div>
+{% endif %}
+
 {% if providers %}
 <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.5rem;">
     {% for p in providers %}
-    {% set icons = {"google_studio":"🔵","blackbox":"🟣","huggingface":"🟠"} %}
+    {% set icons = {"google_studio":"🔵","blackbox":"🟣","huggingface":"🟠","github_copilot":"🟢"} %}
     <div class="card card-sm" style="opacity:{% if p.is_active %}1{% else %}.55{% endif %};">
         <div class="pcard">
             <!-- Badge + icon -->
@@ -164,7 +192,7 @@
         <div class="form-grid" style="margin-bottom:1rem;">
             <div class="form-group">
                 <label class="form-label">الاسم (للتعريف فقط)</label>
-                <input class="input" type="text" name="name" placeholder="مثال: Gemini Key 1" required>
+                <input class="input" type="text" name="name" id="provider_name" placeholder="مثال: Gemini Key 1" required>
             </div>
             <div class="form-group">
                 <label class="form-label">نوع المزود</label>
@@ -172,16 +200,30 @@
                     <option value="google_studio">🔵 Google AI Studio</option>
                     <option value="blackbox">🟣 Blackbox.ai</option>
                     <option value="huggingface">🟠 HuggingFace</option>
+                    <option value="github_copilot">🟢 GitHub Copilot</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="api_key_row">
                 <label class="form-label">مفتاح API</label>
                 <input class="input" type="password" name="api_key" id="api_key_input" placeholder="أدخل مفتاح الـ API"
                     required>
             </div>
+            <div class="form-group" id="copilot_connect_row" style="display:none;">
+                <label class="form-label">التوثيق</label>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <button type="button" onclick="buildCopilotUrl()" class="btn btn-primary"
+                        style="display:flex;align-items:center;gap:0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                        ربط مع GitHub
+                    </button>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">ستُوجَّه إلى GitHub للموافقة</span>
+                </div>
+                <!-- Hidden dummy so form validation passes -->
+                <input type="hidden" name="api_key" value="oauth_pending">
+            </div>
             <div class="form-group">
                 <label class="form-label">الترتيب (أصغر = يُجرَّب أولاً)</label>
-                <input class="input" type="number" name="priority" value="10" min="1" max="999">
+                <input class="input" type="number" name="priority" id="priority_input" value="10" min="1" max="999">
             </div>
             <div class="form-group" style="grid-column:1/-1;">
                 <label class="form-label">النموذج</label>
@@ -195,7 +237,7 @@
                     required>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary btn-full btn-lg">➕ إضافة المزود</button>
+        <button type="submit" id="submit_add_btn" class="btn btn-primary btn-full btn-lg">➕ إضافة المزود</button>
     </form>
 </div>
 {% endblock %}
