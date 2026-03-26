@@ -66,6 +66,8 @@
         document.getElementById("copilot_connect_row").style.display = isCopilot ? "" : "none";
         document.getElementById("submit_add_btn").style.display = isCopilot ? "none" : "";
         document.getElementById("api_key_input").required = !isCopilot;
+        // Only submit the dummy oauth_pending field when Copilot is selected
+        document.getElementById("copilot_dummy_key").disabled = !isCopilot;
         if (!isCopilot) {
             document.getElementById("api_key_input").placeholder = type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API";
         }
@@ -151,7 +153,7 @@
         } catch(e) { /* network hiccup, retry */ }
         _pollTimer = setTimeout(() => pollDeviceFlow(deviceCode, intervalMs), intervalMs);
     }
-    window.onload = () => populatePresets(document.getElementById("provider_type").value);
+    window.onload = () => onTypeChange();
 </script>
 {% endblock %}
 
@@ -261,8 +263,8 @@
                     </button>
                     <span style="font-size:0.8rem;color:var(--text-muted);">ستُوجَّه إلى GitHub للموافقة</span>
                 </div>
-                <!-- Hidden dummy so form validation passes -->
-                <input type="hidden" name="api_key" value="oauth_pending">
+                <!-- Hidden dummy so form validation passes when Copilot is selected -->
+                <input type="hidden" name="api_key" id="copilot_dummy_key" value="oauth_pending" disabled>
             </div>
             <div class="form-group">
                 <label class="form-label">الترتيب (أصغر = يُجرَّب أولاً)</label>
