@@ -243,6 +243,7 @@ class AIProviderStat(Base):
     # 'ok', 'rate_limit_minute', 'rate_limit_day', 'error'
     last_status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_raw_response: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 

@@ -63,8 +63,17 @@
             </div>
             <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.6;">
                 <div>📅 <strong>التاريخ:</strong> {{ s.date }}</div>
-                <div>🕒 <strong>آخر طلب:</strong> <span dir="ltr">{{ s.last_used }}</span></div>
-            </div>
+                <div>🕒 <strong>آخر طلب:</strong> <span dir="ltr">{{ s.last_used }}</span></div>                {% if s.raw_response %}
+                <div style="margin-top:0.3rem;">
+                    🤖 <strong>آخر رد:</strong>
+                    <code style="background:var(--bg);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.75rem;color:{% if s.status == 'ok' %}var(--success){% else %}var(--danger){% endif %};">{{ s.raw_response }}</code>
+                </div>
+                {% endif %}
+                {% if s.error %}
+                <div style="margin-top:0.2rem;color:var(--danger);font-size:0.72rem;">
+                    ❌ {{ s.error[:120] }}
+                </div>
+                {% endif %}            </div>
         </div>
 
         <!-- Left Side: Counts & Action -->

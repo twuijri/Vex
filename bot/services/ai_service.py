@@ -79,13 +79,15 @@ async def _get_or_create_stat(session, provider_key: str, today: date) -> AIProv
     return stat
 
 
-async def _record_usage(provider_key: str, status: str, error: Optional[str] = None):
+async def _record_usage(provider_key: str, status: str, error: Optional[str] = None, raw_response: Optional[str] = None):
     today = date.today()
     async with get_db() as session:
         stat = await _get_or_create_stat(session, provider_key, today)
         stat.requests_count += 1
         stat.last_status = status
         stat.last_error = error
+        if raw_response is not None:
+            stat.last_raw_response = raw_response[:500]
         stat.last_used_at = datetime.utcnow()
 
 
@@ -109,7 +111,37 @@ async def _is_daily_quota_exhausted(provider_key: str, daily_limit: int) -> bool
 
 
 # ─── Provider Callers ─────────────────────────────────────────────────────────
-# Fixed suffix always appended after the custom system instructions
+# Fixed prefix — always prepended (not editable by user)
+_FIXED_PREFIX_AR = (
+    "أنت نظام مراقبة محتوى لمجموعات تيليجرام. "
+    "مهمتك تقييم الرسائل على مقياس من 0.0 إلى 1.0 حيث:\n"
+    "- 0.0 = رسالة طبيعية تماماً\n"
+    "- 1.0 = رسالة مسيئة جداً\n\n"
+    "قواعد المجموعة:\n"
+)
+_FIXED_PREFIX_EN = (
+    "You are a content moderation system for Telegram groups. "
+    "Rate messages on a scale from 0.0 to 1.0 where:\n"
+    "- 0.0 = completely normal message\n"
+    "- 1.0 = highly abusive message\n\n"
+    "Group rules:\n"
+)
+# Default rules used when no custom rules are set
+_DEFAULT_RULES_AR = (
+    "- الشتائم والألفاظ النابية\n"
+    "- التحرش والمحتوى الجنسي\n"
+    "- التهديد والعنف\n"
+    "- العنصرية والتمييز\n"
+    "- الإزعاج المتكرر والسبام"
+)
+_DEFAULT_RULES_EN = (
+    "- Insults and profanity\n"
+    "- Harassment and sexual content\n"
+    "- Threats and violence\n"
+    "- Racism and discrimination\n"
+    "- Spam and repeated annoyance"
+)
+# Fixed suffix — always appended after rules
 _FIXED_SUFFIX_AR = (
     "\n\nالرسالة: \u00ab{text}\u00bb\n\n"
     "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
@@ -120,25 +152,24 @@ _FIXED_SUFFIX_EN = (
 )
 
 
+def _build_prompt_ar(custom_rules: str | None, text: str) -> str:
+    rules = custom_rules.strip() if custom_rules and custom_rules.strip() else _DEFAULT_RULES_AR
+    return _FIXED_PREFIX_AR + rules + _FIXED_SUFFIX_AR.replace("{text}", text[:500])
+
+
+def _build_prompt_en(custom_rules: str | None, text: str) -> str:
+    rules = custom_rules.strip() if custom_rules and custom_rules.strip() else _DEFAULT_RULES_EN
+    return _FIXED_PREFIX_EN + rules + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
+
+
 async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     """Call Google AI Studio (Gemini) API."""
     import google.generativeai as genai
     genai.configure(api_key=api_key)
     gemini_model = genai.GenerativeModel(model or "gemini-1.5-flash")
 
-    DEFAULT_SYSTEM = (
-        "أنت نظام كشف المحتوى المسيء في مجموعات التيليجرام. "
-        "قيّم الرسالة التالية على مقياس من 0.0 إلى 1.0 حيث:\n"
-        "- 0.0 = رسالة طبيعية تماما\u0646\n"
-        "- 1.0 = رسالة مسيئة جدا\u064b (شتم، تحرش، محتوى ضار)"
-    )
     custom = await get_ai_prompt_override()
-    if custom:
-        # User wrote system instructions only — append fixed text+score suffix
-        prompt = custom + _FIXED_SUFFIX_AR.replace("{text}", text[:500])
-    else:
-        # Full default prompt
-        prompt = DEFAULT_SYSTEM + _FIXED_SUFFIX_AR.replace("{text}", text[:500])
+    prompt = _build_prompt_ar(custom, text)
     response = await gemini_model.generate_content_async(prompt)
     raw = response.text.strip().replace(",", ".")
     return max(0.0, min(1.0, float(raw.split()[0])))
@@ -151,17 +182,8 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
         api_key=api_key,
         base_url="https://api.blackbox.ai",  # Correct base URL (no /api/v1)
     )
-    DEFAULT_SYSTEM = (
-        "You are an Arabic content moderation system for Telegram groups. "
-        "Rate the following message on a scale from 0.0 to 1.0 where:\n"
-        "- 0.0 = completely normal message\n"
-        "- 1.0 = highly abusive (insults, harassment, harmful content)"
-    )
     custom = await get_ai_prompt_override()
-    if custom:
-        prompt = custom + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
-    else:
-        prompt = DEFAULT_SYSTEM + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
+    prompt = _build_prompt_en(custom, text)
     response = await client.chat.completions.create(
         model=model or "blackboxai",
         messages=[{"role": "user", "content": prompt}],
@@ -197,14 +219,8 @@ async def _call_github_copilot(oauth_token: str, model: str, text: str) -> float
         copilot_token = token_resp.json()["token"]
 
         # Step 2: Call Copilot completions (OpenAI-compatible)
-        DEFAULT_SYSTEM = (
-            "You are an Arabic content moderation system for Telegram groups. "
-            "Rate the following message on a scale from 0.0 to 1.0 where:\n"
-            "- 0.0 = completely normal message\n"
-            "- 1.0 = highly abusive (insults, harassment, harmful content)"
-        )
         custom = await get_ai_prompt_override()
-        prompt = (custom if custom else DEFAULT_SYSTEM) + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
+        prompt = _build_prompt_en(custom, text)
 
         resp = await client.post(
             "https://api.githubcopilot.com/chat/completions",
@@ -298,7 +314,7 @@ async def analyze_text(text: str) -> float:
 
         try:
             score = await _call_provider(provider, text)
-            await _record_usage(key_label, "ok")
+            await _record_usage(key_label, "ok", raw_response=str(score))
             logger.info(f"[AI] '{provider.name}' → score={score:.2f}")
             return score
 
@@ -308,7 +324,7 @@ async def analyze_text(text: str) -> float:
             # Permanent errors (wrong key, region blocked) → mark as error, try next
             if any(kw in err_str for kw in PERMANENT_ERROR_KEYWORDS):
                 logger.error(f"[AI] '{provider.name}' permanent error (bad key?): {e}")
-                await _record_usage(key_label, "error", f"[PERMANENT] {e}")
+                await _record_usage(key_label, "error", f"[PERMANENT] {e}", raw_response=str(e))
                 continue
 
             # Daily quota exhausted → skip until tomorrow
@@ -318,7 +334,7 @@ async def analyze_text(text: str) -> float:
             )
             if is_daily:
                 logger.warning(f"[AI] '{provider.name}' daily quota hit.")
-                await _record_usage(key_label, "rate_limit_day", str(e))
+                await _record_usage(key_label, "rate_limit_day", str(e), raw_response=str(e))
                 continue
 
             # Per-minute rate limit → try next key immediately
@@ -360,6 +376,7 @@ async def get_provider_stats(days: int = 30) -> list[dict]:
             "status": r.last_status or "—",
             "last_used": r.last_used_at.strftime("%H:%M") if r.last_used_at else "—",
             "error": (r.last_error or "")[:300],
+            "raw_response": r.last_raw_response or "",
         }
         for r in rows
     ]

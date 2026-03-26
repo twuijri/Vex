@@ -21,42 +21,32 @@
 
 <!-- Prompt Editor -->
 <div class="card" style="margin-bottom:1rem;">
-    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📝 تعليماتك (البرومبت
-        الحالي)</h2>
-    <div class="hint-box">
-        💡 اكتب <strong>تعليماتك فقط</strong> — البوت يُضيف <u>تلقائياً</u> في النهاية:
-        الرسالة + طلب الرقم بين 0.0-1.0
-    </div>
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">📝 قواعد المجموعة</h2>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.6;">
+        اكتب فقط <strong>ما تريد منعه</strong> في مجموعتك — الجزء المقفل بالأعلى والأسفل يُضاف تلقائياً.
+    </p>
+
+    <!-- Fixed prefix (locked) -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px 10px 0 0;padding:0.75rem 1rem;font-size:0.79rem;color:var(--text-muted);white-space:pre-wrap;line-height:1.6;">🔒 {{ fixed_prefix }}</div>
+
+    <!-- Editable rules -->
     <form method="post" action="/dashboard/ai-prompt/save" id="prompt-save-form">
-        <textarea class="textarea-field" name="prompt" {% if not has_providers %}disabled{% endif
-            %}>{{ current_prompt }}</textarea>
+        <textarea name="prompt"
+            {% if not has_providers %}disabled{% endif %}
+            placeholder="{{ default_rules }}"
+            style="width:100%;box-sizing:border-box;padding:0.85rem 1rem;font-size:0.88rem;line-height:1.7;background:var(--card-bg);color:var(--text);border:1px solid var(--primary);border-top:none;border-bottom:none;border-radius:0;resize:vertical;min-height:120px;font-family:inherit;outline:none;">{{ current_rules }}</textarea>
     </form>
+
+    <!-- Fixed suffix (locked) -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:0 0 10px 10px;padding:0.75rem 1rem;font-size:0.79rem;color:var(--text-muted);white-space:pre-wrap;line-height:1.6;">🔒 {{ fixed_suffix }}</div>
+
     <form method="post" action="/dashboard/ai-prompt/reset" id="prompt-reset-form"
         onsubmit="return confirm('إعادة الضبط إلى الافتراضي؟')"></form>
-    <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
-        <button type="submit" form="prompt-save-form" class="btn btn-primary" {% if not has_providers %}disabled{% endif
-            %}>💾 حفظ البرومبت</button>
-        <button type="submit" form="prompt-reset-form" class="btn btn-danger" {% if not has_providers %}disabled{% endif
-            %}>♻️ إعادة الضبط</button>
+    <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;align-items:center;">
+        <button type="submit" form="prompt-save-form" class="btn btn-primary" {% if not has_providers %}disabled{% endif %}>💾 حفظ القواعد</button>
+        <button type="submit" form="prompt-reset-form" class="btn btn-danger" {% if not has_providers %}disabled{% endif %}>♻️ إعادة الضبط</button>
+        <span style="font-size:0.78rem;color:var(--text-muted);">إذا تركت فارغاً تُستخدم القواعد الافتراضية</span>
     </div>
-</div>
-
-<!-- Fixed Suffix -->
-<div class="card" style="margin-bottom:1rem;border-color:var(--secondary);">
-    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📋 يُضاف تلقائياً بعد
-        تعليماتك (ثابت)</h2>
-    <div class="suffix-box">الرسالة: «[نص الرسالة]»
-        أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر.</div>
-    <p style="color:var(--text-muted);font-size:0.78rem;margin-top:0.5rem;">هذه الأسطر تُضاف دائماً — لا تكتبها في
-        تعليماتك.</p>
-</div>
-
-<!-- Default Reference -->
-<div class="card" style="margin-bottom:1rem;">
-    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">📋 التعليمات الافتراضية
-        (للرجوع إليها)</h2>
-    <pre
-        style="background:var(--bg);border-radius:10px;padding:1rem;font-size:0.8rem;direction:ltr;overflow-x:auto;color:var(--text-muted);">{{ default_prompt }}</pre>
 </div>
 
 <!-- Debug Channel -->

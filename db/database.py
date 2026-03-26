@@ -37,6 +37,8 @@ async def init_db():
             # BotConfig new columns added after initial schema
             "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_prompt_override TEXT",
             "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_debug_channel_id BIGINT",
+            # AIProviderStat: raw response column
+            "ALTER TABLE ai_provider_stats ADD COLUMN IF NOT EXISTS last_raw_response TEXT",
         ]
         for sql in migrations:
             try:
