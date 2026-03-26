@@ -30,6 +30,26 @@ from bot.core.config import (
 
 logger = logging.getLogger("vex.web.dashboard")
 
+# ── Prompt display constants (mirrored from ai_service.py for the UI) ─────────
+FIXED_PREFIX_DISPLAY = (
+    "أنت نظام مراقبة محتوى لمجموعات تيليجرام. "
+    "مهمتك تقييم الرسائل على مقياس من 0.0 إلى 1.0 حيث:\n"
+    "  • 0.0 = رسالة طبيعية تماماً\n"
+    "  • 1.0 = رسالة مسيئة جداً\n\n"
+    "قواعد المجموعة:"
+)
+FIXED_SUFFIX_DISPLAY = (
+    "الرسالة: «{نص الرسالة}»\n"
+    "أجب برقم عشري فقط بين 0.0 و 1.0، لا شيء آخر."
+)
+DEFAULT_RULES_REFERENCE = (
+    "- الشتائم والألفاظ النابية\n"
+    "- التحرش والمحتوى الجنسي\n"
+    "- التهديد والعنف\n"
+    "- العنصرية والتمييز\n"
+    "- الإزعاج المتكرر والسبام"
+)
+
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 templates = Jinja2Templates(
     directory=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")
