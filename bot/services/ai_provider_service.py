@@ -84,9 +84,14 @@ async def move_provider(provider_id: int, direction: str) -> bool:
     """Move a provider up or down in priority order."""
     async with get_db() as session:
         all_result = await session.execute(
-            select(AIProvider).order_by(AIProvider.priority)
+            select(AIProvider).order_by(AIProvider.priority, AIProvider.id)
         )
         providers = list(all_result.scalars().all())
+
+        # Normalize priorities to 1, 2, 3, ... so swapping always changes values
+        for i, p in enumerate(providers):
+            p.priority = i + 1
+        await session.flush()
 
         idx = next((i for i, p in enumerate(providers) if p.id == provider_id), None)
         if idx is None:
