@@ -60,7 +60,7 @@ async def dashboard_page(request: Request):
 
 
 @router.get("/groups", response_class=HTMLResponse)
-async def groups_page(request: Request):
+async def groups_page(request: Request, add_msg: str = ""):
     """Managed groups list"""
     config = await load_bot_config()
     if not config or not config.is_setup_complete:
@@ -72,8 +72,30 @@ async def groups_page(request: Request):
         "request": request,
         "groups": groups,
         "bot_username": config.bot_username,
-            "active_page": "groups",
+        "active_page": "groups",
+        "add_msg": add_msg,
     })
+
+
+@router.post("/groups/add")
+async def groups_add_manual(
+    telegram_group_id: str = Form(...),
+    group_name: str = Form(...),
+):
+    """Manually register a group by its Telegram ID"""
+    try:
+        gid = int(telegram_group_id.strip())
+    except ValueError:
+        return RedirectResponse(url="/dashboard/groups?add_msg=❌ ID غير صحيح، تأكد أنه رقم", status_code=303)
+
+    from bot.services.group_service import activate_group
+    result = await activate_group(
+        telegram_group_id=gid,
+        group_name=group_name.strip(),
+        group_type="group",
+        activated_by=0,
+    )
+    return RedirectResponse(url=f"/dashboard/groups?add_msg={result}", status_code=303)
 
 
 @router.get("/users", response_class=HTMLResponse)

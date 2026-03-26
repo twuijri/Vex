@@ -8,6 +8,30 @@
     <p class="page-subtitle">جميع المجموعات التي يديرها البوت</p>
 </div>
 
+<!-- Add group manually -->
+<div class="card" style="margin-bottom:1.5rem;">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:1rem;">➕ إضافة مجموعة يدوياً</h2>
+    {% if add_msg %}
+    <div style="margin-bottom:0.75rem;padding:0.6rem 0.9rem;border-radius:8px;
+        background:{% if '✅' in add_msg %}rgba(56,200,96,.15){% else %}rgba(220,50,50,.15){% endif %};
+        border:1px solid {% if '✅' in add_msg %}#38c860{% else %}#dc3232{% endif %};
+        color:{% if '✅' in add_msg %}#38c860{% else %}#ff6b6b{% endif %};font-size:.88rem;">{{ add_msg }}</div>
+    {% endif %}
+    <form method="post" action="/dashboard/groups/add" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+        <div style="flex:1;min-width:160px;">
+            <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">ID المجموعة</label>
+            <input class="input" type="text" name="telegram_group_id" placeholder="مثال: -1001234567890" required
+                style="direction:ltr;font-family:monospace;">
+        </div>
+        <div style="flex:2;min-width:160px;">
+            <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">اسم المجموعة</label>
+            <input class="input" type="text" name="group_name" placeholder="اسم المجموعة" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="white-space:nowrap;">➕ إضافة</button>
+    </form>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.6rem;">💡 للحصول على ID المجموعة: أضف البوت للمجموعة ثم أرسل أي رسالة وستجد الـ ID في السجلات، أو استخدم @userinfobot</p>
+</div>
+
 {% if groups %}
 <div style="display:flex;flex-direction:column;gap:0.75rem;">
     {% for g in groups %}
@@ -43,7 +67,7 @@
 <div class="card">
     <div class="empty-state">
         <div class="empty-state-icon">👥</div>
-        <div class="empty-state-text">لا توجد مجموعات مُفعَّلة بعد.<br>أضف البوت لمجموعة واكتب <code>/start</code></div>
+        <div class="empty-state-text">لا توجد مجموعات مُفعَّلة بعد.<br>أضف مجموعة من النموذج أعلاه أو أضف البوت لمجموعة واكتب <code>/start</code></div>
     </div>
 </div>
 {% endif %}
