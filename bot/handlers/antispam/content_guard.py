@@ -8,7 +8,7 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from bot.services.admin_service import is_admin, get_admin_group_id
 from bot.services.group_service import is_managed_group, list_blocked_words
 from bot.services.ai_service import analyze_text as ai_analyze_text
-from bot.core.config import get_ai_debug_channel_id
+from bot.core.config import get_ai_debug_channel_id, get_ai_thresholds
 
 logger = logging.getLogger("vex.handlers.antispam.content_guard")
 
@@ -88,7 +88,7 @@ async def check_against_blacklists(normalized_text: str, chat_id: int) -> bool:
     return False
 
 
-AI_THRESHOLD = 0.65  # 65% → more sensitive, catches borderline cases too
+AI_THRESHOLD = 0.65  # legacy constant (no longer used directly — thresholds come from DB)
 
 
 async def send_admin_alert(
@@ -100,35 +100,33 @@ async def send_admin_alert(
     abuse_score: float,
     chat_id: int,
     message_id: int,
+    auto_deleted: bool = False,
 ) -> None:
-    """Send an alert to the admin group with action buttons."""
+    """Send an alert to the admin group with action buttons (or auto-delete notice)."""
     score_pct = int(abuse_score * 100)
-    alert_text = (
-        f"⚠️ **اشتباه برسالة مسيئة بنسبة {score_pct}%**\n\n"
-        f"👤 المستخدم: [{user_name}](tg://user?id={user_id})\n"
-        f"💬 الرسالة الأصلية:\n`{original_text[:300]}`"
-    )
 
-    # Build a direct link to the message
-    # For private/numeric groups Telegram uses: t.me/c/{id_without_-100}/{msg_id}
-    chat_id_clean = str(chat_id).lstrip("-").removeprefix("100")
-    msg_link = f"https://t.me/c/{chat_id_clean}/{message_id}"
-
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🔗 اذهب للرسالة", url=msg_link),
-        ],
-        [
-            InlineKeyboardButton(
-                "🗑️ احذف الرسالة",
-                callback_data=f"guard_delete:{chat_id}:{message_id}"
-            ),
-            InlineKeyboardButton(
-                "✅ لا تحذف",
-                callback_data=f"guard_keep:{chat_id}:{message_id}"
-            ),
-        ]
-    ])
+    if auto_deleted:
+        alert_text = (
+            f"🗑️ **تم الحذف التلقائي — نسبة الإساءة {score_pct}%**\n\n"
+            f"👤 المستخدم: [{user_name}](tg://user?id={user_id})\n"
+            f"💬 الرسالة المحذوفة:\n`{original_text[:300]}`"
+        )
+        keyboard = None
+    else:
+        alert_text = (
+            f"⚠️ **اشتباه برسالة مسيئة بنسبة {score_pct}%**\n\n"
+            f"👤 المستخدم: [{user_name}](tg://user?id={user_id})\n"
+            f"💬 الرسالة الأصلية:\n`{original_text[:300]}`"
+        )
+        chat_id_clean = str(chat_id).lstrip("-").removeprefix("100")
+        msg_link = f"https://t.me/c/{chat_id_clean}/{message_id}"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔗 اذهب للرسالة", url=msg_link)],
+            [
+                InlineKeyboardButton("🗑️ احذف الرسالة", callback_data=f"guard_delete:{chat_id}:{message_id}"),
+                InlineKeyboardButton("✅ لا تحذف", callback_data=f"guard_keep:{chat_id}:{message_id}"),
+            ]
+        ])
 
     await context.bot.send_message(
         chat_id=admin_group_id,
@@ -185,18 +183,29 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
             logger.warning(f"[GUARD-L2] Could not delete message: {e}")
         return  # Stop here, do not proceed to AI layer
 
-    # ── Layer 3: AI Analysis → alert admins if score is high ─────────────────
+    # ── Layer 3: AI Analysis ──────────────────────────────────────────────────
     admin_group_id = await get_admin_group_id()
     if not admin_group_id:
         return  # No admin group configured, skip AI layer silently
 
     score = await ai_analyze_text(normalized)
-    logger.info(f"[GUARD-L3] AI score = {score:.2f} (threshold={AI_THRESHOLD}) for user {user.id} in {chat.id}")
+    alert_threshold, auto_delete_threshold = await get_ai_thresholds()
+    logger.info(
+        f"[GUARD-L3] AI score={score:.2f} alert>={alert_threshold} auto_del>={auto_delete_threshold} "
+        f"user={user.id} chat={chat.id}"
+    )
 
-    action_taken = score >= AI_THRESHOLD
-    if action_taken:
-        logger.info(f"[GUARD-L3] AI score {score:.0%} for message from {user.id} in {chat.id}. Alerting admins.")
-        user_name = user.full_name or user.username or str(user.id)
+    user_name = user.full_name or user.username or str(user.id)
+    action_taken = False
+
+    if score >= auto_delete_threshold:
+        # Auto-delete and notify admins
+        action_taken = True
+        try:
+            await message.delete()
+            logger.info(f"[GUARD-L3] Auto-deleted message from {user.id} in {chat.id} (score={score:.2f})")
+        except Exception as e:
+            logger.warning(f"[GUARD-L3] Could not auto-delete message: {e}")
         try:
             await send_admin_alert(
                 context=context,
@@ -207,6 +216,26 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
                 abuse_score=score,
                 chat_id=chat.id,
                 message_id=message.message_id,
+                auto_deleted=True,
+            )
+        except Exception as e:
+            logger.error(f"[GUARD-L3] Failed to send auto-delete notice: {e}")
+
+    elif score >= alert_threshold:
+        # Alert admins, let them decide
+        action_taken = True
+        logger.info(f"[GUARD-L3] Alerting admins for message from {user.id} in {chat.id} (score={score:.2f})")
+        try:
+            await send_admin_alert(
+                context=context,
+                admin_group_id=admin_group_id,
+                user_name=user_name,
+                user_id=user.id,
+                original_text=original_text,
+                abuse_score=score,
+                chat_id=chat.id,
+                message_id=message.message_id,
+                auto_deleted=False,
             )
         except Exception as e:
             logger.error(f"[GUARD-L3] Failed to send admin alert: {e}")
@@ -217,14 +246,19 @@ async def content_guard_handler(update: Update, context: ContextTypes.DEFAULT_TY
         try:
             bar = int(score * 10)
             bar_filled = '█' * bar + '░' * (10 - bar)
-            action_label = "🚨 تنبيه أرسل للمشرفين" if action_taken else "✅ لم يتخذ إجراء"
+            if score >= auto_delete_threshold:
+                action_label = "🗑️ حذف تلقائي"
+            elif score >= alert_threshold:
+                action_label = "🚨 تنبيه أرسل للمشرفين"
+            else:
+                action_label = "✅ لم يتخذ إجراء"
             debug_text = (
                 f"🔬 *AI Debug Log*\n"
                 f"────────────────────\n"
                 f"💬 *الرسالة:* `{original_text[:300]}`\n"
                 f"📊 *النتيجة:* `{score:.2f}` / 1.0\n"
                 f"[{bar_filled}] {score*100:.0f}%\n"
-                f"⚡ *العتبة:* `{AI_THRESHOLD}`\n"
+                f"⚡ *تنبيه من:* `{alert_threshold:.0%}` | *حذف من:* `{auto_delete_threshold:.0%}`\n"
                 f"📍 *المجموعة:* `{chat.id}`\n"
                 f"🛡 *الإجراء:* {action_label}"
             )

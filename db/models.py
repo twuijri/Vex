@@ -31,6 +31,9 @@ class BotConfig(Base):
     ai_prompt_override: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Debug channel — if set, bot forwards every AI analysis result here
     ai_debug_channel_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    # AI thresholds — alert_threshold: notify admins; auto_delete_threshold: auto-delete
+    ai_alert_threshold: Mapped[float] = mapped_column(Float, default=0.50)
+    ai_auto_delete_threshold: Mapped[float] = mapped_column(Float, default=0.90)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

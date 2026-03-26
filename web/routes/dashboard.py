@@ -26,6 +26,7 @@ from bot.services.ai_provider_service import (
 from bot.core.config import (
     load_bot_config, get_ai_prompt_override, set_ai_prompt_override,
     get_ai_debug_channel_id, set_ai_debug_channel_id,
+    get_ai_thresholds, set_ai_thresholds,
 )
 
 logger = logging.getLogger("vex.web.dashboard")
@@ -470,6 +471,7 @@ async def ai_prompt_page(request: Request, msg: str = ""):
     providers = await list_providers()
     current = await get_ai_prompt_override()
     debug_ch = await get_ai_debug_channel_id()
+    alert_thr, auto_del_thr = await get_ai_thresholds()
     return templates.TemplateResponse("ai_prompt.html", {
         "request": request,
         "bot_username": config.bot_username,
@@ -479,6 +481,8 @@ async def ai_prompt_page(request: Request, msg: str = ""):
         "fixed_prefix": FIXED_PREFIX_DISPLAY,
         "fixed_suffix": FIXED_SUFFIX_DISPLAY,
         "debug_channel_id": debug_ch,
+        "alert_threshold": alert_thr,
+        "auto_delete_threshold": auto_del_thr,
         "msg": msg,
             "active_page": "ai_prompt",
     })
@@ -494,6 +498,21 @@ async def ai_prompt_save(prompt: str = Form(...)):
 async def ai_prompt_reset():
     await set_ai_prompt_override(None)
     return RedirectResponse(url="/dashboard/ai-prompt?msg=تمت إعادة الضبط إلى الافتراضي ✅", status_code=303)
+
+
+@router.post("/ai-prompt/thresholds/save")
+async def ai_thresholds_save(
+    alert_threshold: float = Form(...),
+    auto_delete_threshold: float = Form(...),
+):
+    """Save the two AI action thresholds."""
+    if alert_threshold >= auto_delete_threshold:
+        return RedirectResponse(
+            url="/dashboard/ai-prompt?msg=❌ عتبة التنبيه يجب أن تكون أقل من عتبة الحذف التلقائي",
+            status_code=303,
+        )
+    await set_ai_thresholds(alert_threshold, auto_delete_threshold)
+    return RedirectResponse(url="/dashboard/ai-prompt?msg=تم حفظ العتبات بنجاح ✅", status_code=303)
 
 
 @router.post("/ai-prompt/debug-channel/save")

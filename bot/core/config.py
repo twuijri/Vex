@@ -95,3 +95,25 @@ async def set_ai_debug_channel_id(channel_id: Optional[int]) -> None:
         config = result.scalar_one_or_none()
         if config:
             config.ai_debug_channel_id = channel_id
+
+
+async def get_ai_thresholds() -> tuple[float, float]:
+    """Return (alert_threshold, auto_delete_threshold). Defaults: 0.50 and 0.90."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        if config:
+            alert = config.ai_alert_threshold if config.ai_alert_threshold is not None else 0.50
+            auto_del = config.ai_auto_delete_threshold if config.ai_auto_delete_threshold is not None else 0.90
+            return alert, auto_del
+        return 0.50, 0.90
+
+
+async def set_ai_thresholds(alert_threshold: float, auto_delete_threshold: float) -> None:
+    """Save both AI thresholds."""
+    async with get_db() as session:
+        result = await session.execute(select(BotConfig).limit(1))
+        config = result.scalar_one_or_none()
+        if config:
+            config.ai_alert_threshold = max(0.0, min(1.0, alert_threshold))
+            config.ai_auto_delete_threshold = max(0.0, min(1.0, auto_delete_threshold))

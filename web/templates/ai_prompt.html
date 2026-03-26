@@ -49,6 +49,73 @@
     </div>
 </div>
 
+<!-- Thresholds -->
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">⚡ عتبات الإجراء</h2>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
+        تحكم متى يُنبَّه المشرفون ومتى يُحذف تلقائياً.
+    </p>
+    <form method="post" action="/dashboard/ai-prompt/thresholds/save">
+        <div style="display:flex;flex-direction:column;gap:1.25rem;margin-bottom:1rem;">
+
+            <!-- Alert threshold -->
+            <div>
+                <label style="font-size:0.88rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                    🚨 تنبيه المشرفين إذا تجاوزت
+                    <span id="alert_pct" style="color:var(--primary);font-weight:700;">{{ (alert_threshold * 100) | int }}%</span>
+                </label>
+                <input type="range" name="alert_threshold" id="alert_slider"
+                    min="0.05" max="0.95" step="0.05"
+                    value="{{ alert_threshold }}"
+                    oninput="document.getElementById('alert_pct').textContent = Math.round(this.value*100)+'%'"
+                    style="width:100%;accent-color:var(--primary);">
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">
+                    <span>5%</span><span>50%</span><span>95%</span>
+                </div>
+            </div>
+
+            <!-- Auto-delete threshold -->
+            <div>
+                <label style="font-size:0.88rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                    🗑️ حذف تلقائي إذا تجاوزت
+                    <span id="autodel_pct" style="color:#ff6b6b;font-weight:700;">{{ (auto_delete_threshold * 100) | int }}%</span>
+                </label>
+                <input type="range" name="auto_delete_threshold" id="autodel_slider"
+                    min="0.05" max="1.0" step="0.05"
+                    value="{{ auto_delete_threshold }}"
+                    oninput="document.getElementById('autodel_pct').textContent = Math.round(this.value*100)+'%'"
+                    style="width:100%;accent-color:#ff6b6b;">
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">
+                    <span>5%</span><span>50%</span><span>100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual summary -->
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.8;margin-bottom:1rem;">
+            📊 <strong>ملخص:</strong><br>
+            &nbsp;&nbsp;• أقل من <span id="s_alert">{{ (alert_threshold * 100) | int }}%</span> → لا إجراء ✅<br>
+            &nbsp;&nbsp;• بين <span id="s_alert2">{{ (alert_threshold * 100) | int }}%</span> و <span id="s_autodel">{{ (auto_delete_threshold * 100) | int }}%</span> → تنبيه للمشرفين ⚠️<br>
+            &nbsp;&nbsp;• فوق <span id="s_autodel2">{{ (auto_delete_threshold * 100) | int }}%</span> → حذف تلقائي فوري 🗑️
+        </div>
+
+        <button type="submit" class="btn btn-primary">💾 حفظ العتبات</button>
+    </form>
+</div>
+
+<script>
+function updateSummary() {
+    const a = Math.round(document.getElementById('alert_slider').value * 100);
+    const d = Math.round(document.getElementById('autodel_slider').value * 100);
+    document.getElementById('s_alert').textContent = a + '%';
+    document.getElementById('s_alert2').textContent = a + '%';
+    document.getElementById('s_autodel').textContent = d + '%';
+    document.getElementById('s_autodel2').textContent = d + '%';
+}
+document.getElementById('alert_slider').addEventListener('input', updateSummary);
+document.getElementById('autodel_slider').addEventListener('input', updateSummary);
+</script>
+
 <!-- Debug Channel -->
 <div class="card" style="border-color:{% if debug_channel_id %}var(--success){% else %}var(--border){% endif %};">
     <h2 style="font-size:0.95rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">🔬 قناة التتبع (Debug
