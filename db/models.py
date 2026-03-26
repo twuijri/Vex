@@ -261,8 +261,10 @@ class AIProvider(Base):
     provider_type: Mapped[str] = mapped_column(String(30))
     # API key
     api_key: Mapped[str] = mapped_column(Text)
-    # Model name, e.g. 'gemini-1.5-flash', 'gpt-4o', 'aubmindlab/bert-base-arabertv02'
+    # Model name, e.g. 'gemini-1.5-flash', 'gpt-3.5-turbo'
     model: Mapped[str] = mapped_column(String(200))
+    # Optional base URL — required for LiteLLM / self-hosted endpoints
+    base_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     # Lower number = tried first
     priority: Mapped[int] = mapped_column(Integer, default=10)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

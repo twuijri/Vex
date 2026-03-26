@@ -38,7 +38,16 @@
     }
 </style>
 <script>
+<script>
     const PRESETS = {
+        litellm: [
+            { label: "gpt-4o", value: "gpt-4o" },
+            { label: "gpt-4o-mini", value: "gpt-4o-mini" },
+            { label: "gpt-3.5-turbo", value: "gpt-3.5-turbo" },
+            { label: "claude-3-5-sonnet", value: "claude-3-5-sonnet" },
+            { label: "gemini/gemini-2.0-flash", value: "gemini/gemini-2.0-flash" },
+            { label: "اكتب اسم النموذج يدوياً", value: "" },
+        ],
         google_studio: [
             { label: "Gemini 2.0 Flash — مجاني · سريع جداً", value: "gemini-2.0-flash" },
             { label: "Gemini 2.0 Flash Lite", value: "gemini-2.0-flash-lite" },
@@ -51,26 +60,16 @@
             { label: "CAMeL BERT", value: "CAMeL-Lab/bert-base-arabic-camelbert-mix" },
         ],
         blackbox: [{ label: "(جلب تلقائي)", value: "" }],
-        github_copilot: [
-            { label: "GPT-4o", value: "gpt-4o" },
-            { label: "GPT-4", value: "gpt-4" },
-            { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
-            { label: "Claude 3.5 Sonnet", value: "claude-3.5-sonnet" },
-            { label: "o1-mini", value: "o1-mini" },
-        ],
     };
     function onTypeChange() {
         const type = document.getElementById("provider_type").value;
-        const isCopilot = type === "github_copilot";
-        document.getElementById("api_key_row").style.display = isCopilot ? "none" : "";
-        document.getElementById("copilot_connect_row").style.display = isCopilot ? "" : "none";
-        document.getElementById("submit_add_btn").style.display = isCopilot ? "none" : "";
-        document.getElementById("api_key_input").required = !isCopilot;
-        // Only submit the dummy oauth_pending field when Copilot is selected
-        document.getElementById("copilot_dummy_key").disabled = !isCopilot;
-        if (!isCopilot) {
-            document.getElementById("api_key_input").placeholder = type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API";
-        }
+        const isLitellm = type === "litellm";
+        document.getElementById("base_url_row").style.display = isLitellm ? "" : "none";
+        document.getElementById("api_key_label").textContent = isLitellm ? "Virtual Key (اختياري)" : "مفتاح API";
+        document.getElementById("api_key_input").required = !isLitellm;
+        document.getElementById("api_key_input").placeholder = isLitellm
+            ? "مثال: sk-... أو اتركه فارغاً إذا ما في مصادقة"
+            : (type === "blackbox" ? "ضع cookies/session أو API key" : "أدخل مفتاح الـ API");
         populatePresets(type);
     }
     function populatePresets(type) {
@@ -80,7 +79,8 @@
             const o = document.createElement("option");
             o.value = p.value; o.textContent = p.label; sel.appendChild(o);
         });
-        if (sel.options.length > 0) document.getElementById("model").value = sel.options[0].value;
+        const first = sel.options[0];
+        if (first && first.value) document.getElementById("model").value = first.value;
     }
     function onPresetChange() {
         const val = document.getElementById("model_preset").value;
@@ -89,11 +89,13 @@
     async function fetchModels() {
         const type = document.getElementById("provider_type").value;
         const key = document.getElementById("api_key_input").value;
-        if (!key) { alert("أدخل مفتاح API أولاً"); return; }
+        const baseUrl = document.getElementById("base_url_input").value.trim();
         const btn = document.getElementById("btn_fetch");
         btn.disabled = true; btn.textContent = "جاري الجلب...";
         try {
-            const r = await fetch(`/dashboard/ai-providers/fetch-models?provider_type=${type}&api_key=${encodeURIComponent(key)}`);
+            let url = `/dashboard/ai-providers/fetch-models?provider_type=${type}&api_key=${encodeURIComponent(key)}`;
+            if (baseUrl) url += `&base_url=${encodeURIComponent(baseUrl)}`;
+            const r = await fetch(url);
             const d = await r.json();
             if (d.models && d.models.length) {
                 const sel = document.getElementById("model_preset");
@@ -104,56 +106,8 @@
         } catch (e) { alert("خطأ في الاتصال"); }
         btn.disabled = false; btn.textContent = "🔍 جلب الموديلات";
     }
-    function buildCopilotUrl() {
-        const name = encodeURIComponent(document.getElementById("provider_name").value || "GitHub Copilot");
-        const model = encodeURIComponent(document.getElementById("model").value || "gpt-4o");
-        const priority = encodeURIComponent(document.getElementById("priority_input").value || "10");
-        startDeviceFlow(name, model, priority);
-    }
-    async function startDeviceFlow(name, model, priority) {
-        const btn = document.getElementById("copilot_btn");
-        btn.disabled = true; btn.textContent = "⏳ جاري الاتصال بـ GitHub...";
-        try {
-            const r = await fetch(`/dashboard/ai-providers/github-copilot/device-start?name=${name}&model=${model}&priority=${priority}`);
-            const d = await r.json();
-            if (d.error) { alert("❌ " + d.error); btn.disabled=false; btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> ربط مع GitHub'; return; }
-            showDeviceModal(d);
-            pollDeviceFlow(d.device_code, Math.max(d.interval || 5, 5) * 1000);
-        } catch(e) { alert("خطأ في الاتصال"); btn.disabled=false; }
-    }
-    function showDeviceModal(d) {
-        document.getElementById("device_user_code").textContent = d.user_code;
-        document.getElementById("device_link").href = d.verification_uri;
-        document.getElementById("device_modal").style.display = "flex";
-    }
-    let _pollTimer = null;
-    async function pollDeviceFlow(deviceCode, intervalMs) {
-        clearTimeout(_pollTimer);
-        const statusEl = document.getElementById("device_status");
-        try {
-            const r = await fetch(`/dashboard/ai-providers/github-copilot/device-poll?device_code=${encodeURIComponent(deviceCode)}`);
-            const d = await r.json();
-            if (d.status === "success") {
-                statusEl.textContent = "✅ تم الربط بنجاح! جاري التحديث...";
-                statusEl.style.color = "#38c860";
-                setTimeout(() => location.href = "/dashboard/ai-providers?msg=✅ تم ربط GitHub Copilot بنجاح", 1200);
-                return;
-            } else if (d.status === "expired") {
-                statusEl.textContent = "❌ انتهت صلاحية الكود. أعد المحاولة.";
-                statusEl.style.color = "#ff6b6b";
-                return;
-            } else if (d.status === "error") {
-                statusEl.textContent = "❌ " + (d.message || "خطأ غير معروف");
-                statusEl.style.color = "#ff6b6b";
-                return;
-            }
-            // pending or slow_down — keep polling
-            if (d.status === "slow_down") intervalMs = Math.min(intervalMs + 5000, 30000);
-            statusEl.textContent = "⏳ بانتظار الموافقة على GitHub...";
-        } catch(e) { /* network hiccup, retry */ }
-        _pollTimer = setTimeout(() => pollDeviceFlow(deviceCode, intervalMs), intervalMs);
-    }
     window.onload = () => onTypeChange();
+</script>
 </script>
 {% endblock %}
 
@@ -237,34 +191,29 @@
         <div class="form-grid" style="margin-bottom:1rem;">
             <div class="form-group">
                 <label class="form-label">الاسم (للتعريف فقط)</label>
-                <input class="input" type="text" name="name" id="provider_name" placeholder="مثال: Gemini Key 1" required>
+                <input class="input" type="text" name="name" id="provider_name" placeholder="مثال: LiteLLM Local" required>
             </div>
             <div class="form-group">
                 <label class="form-label">نوع المزود</label>
                 <select class="select-field" name="provider_type" id="provider_type" onchange="onTypeChange()">
+                    <option value="litellm">🟡 LiteLLM (self-hosted)</option>
                     <option value="google_studio">🔵 Google AI Studio</option>
                     <option value="blackbox">🟣 Blackbox.ai</option>
                     <option value="huggingface">🟠 HuggingFace</option>
-                    <option value="github_copilot">🟢 GitHub Copilot</option>
                 </select>
             </div>
-            <div class="form-group" id="api_key_row">
-                <label class="form-label">مفتاح API</label>
-                <input class="input" type="password" name="api_key" id="api_key_input" placeholder="أدخل مفتاح الـ API"
-                    required>
-            </div>
-            <div class="form-group" id="copilot_connect_row" style="display:none;">
-                <label class="form-label">التوثيق</label>
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <button type="button" id="copilot_btn" onclick="buildCopilotUrl()" class="btn btn-primary"
-                        style="display:flex;align-items:center;gap:0.5rem;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                        ربط مع GitHub
-                    </button>
-                    <span style="font-size:0.8rem;color:var(--text-muted);">ستُوجَّه إلى GitHub للموافقة</span>
+            <div class="form-group" id="base_url_row">
+                <label class="form-label">رابط السيرفر (Base URL)</label>
+                <input class="input" type="text" name="base_url" id="base_url_input"
+                    placeholder="مثال: http://192.168.1.10:4000" style="direction:ltr;">
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">
+                    رابط LiteLLM الخاص بك — يُضاف <code>/v1</code> تلقائياً
                 </div>
-                <!-- Hidden dummy so form validation passes when Copilot is selected -->
-                <input type="hidden" name="api_key" id="copilot_dummy_key" value="oauth_pending" disabled>
+            </div>
+            <div class="form-group">
+                <label class="form-label" id="api_key_label">Virtual Key (اختياري)</label>
+                <input class="input" type="password" name="api_key" id="api_key_input"
+                    placeholder="مثال: sk-... أو اتركه فارغاً إذا ما في مصادقة">
             </div>
             <div class="form-group">
                 <label class="form-label">الترتيب (أصغر = يُجرَّب أولاً)</label>
@@ -278,11 +227,10 @@
                     <button type="button" id="btn_fetch" onclick="fetchModels()" class="btn btn-ghost btn-sm"
                         style="white-space:nowrap;">🔍 جلب الموديلات</button>
                 </div>
-                <input class="input" type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً"
-                    required>
+                <input class="input" type="text" name="model" id="model" placeholder="أو اكتب اسم النموذج يدوياً" required>
             </div>
         </div>
-        <button type="submit" id="submit_add_btn" class="btn btn-primary btn-full btn-lg">➕ إضافة المزود</button>
+        <button type="submit" class="btn btn-primary btn-full btn-lg">➕ إضافة المزود</button>
     </form>
 </div>
 {% endblock %}

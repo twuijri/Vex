@@ -23,9 +23,9 @@ logger = logging.getLogger("vex.services.ai")
 # Daily quota safety limits per type
 DAILY_LIMITS: dict[str, int] = {
     "google_studio": 1450,
-    "blackbox": 99999,      # No known hard limit; use credit balance
-    "huggingface": 99999,   # No hard daily limit
-    "github_copilot": 99999,  # Rate-limited by GitHub plan
+    "blackbox": 99999,
+    "huggingface": 99999,
+    "litellm": 99999,  # Self-hosted / virtual key — no hard quota
 }
 
 # Keywords that indicate DAILY quota exhaustion (not just per-minute rate limit)
@@ -193,55 +193,27 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
     return max(0.0, min(1.0, float(raw.split()[0])))
 
 
-async def _call_github_copilot(oauth_token: str, model: str, text: str) -> float:
-    """Call GitHub Copilot API using an OAuth access token.
+async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> float:
+    """Call any LiteLLM-compatible endpoint (self-hosted or proxy).
     
-    Flow:
-      1. Exchange OAuth token for a short-lived Copilot session token.
-      2. Call the OpenAI-compatible Copilot completions endpoint.
+    base_url example: http://my-server:4000
+    model example:    gpt-4o, claude-3-5-sonnet, openai/gpt-4o
     """
-    import httpx
-
-    # Step 1: Get a short-lived Copilot session token
-    headers_gh = {
-        "Authorization": f"token {oauth_token}",
-        "Accept": "application/json",
-        "Editor-Version": "vscode/1.85.0",
-        "Editor-Plugin-Version": "copilot/1.155.0",
-        "User-Agent": "GithubCopilot/1.155.0",
-    }
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        token_resp = await client.get(
-            "https://api.github.com/copilot_internal/v2/token",
-            headers=headers_gh,
-        )
-        token_resp.raise_for_status()
-        copilot_token = token_resp.json()["token"]
-
-        # Step 2: Call Copilot completions (OpenAI-compatible)
-        custom = await get_ai_prompt_override()
-        prompt = _build_prompt_en(custom, text)
-
-        resp = await client.post(
-            "https://api.githubcopilot.com/chat/completions",
-            headers={
-                "Authorization": f"Bearer {copilot_token}",
-                "Content-Type": "application/json",
-                "Editor-Version": "vscode/1.85.0",
-                "Editor-Plugin-Version": "copilot/1.155.0",
-                "User-Agent": "GithubCopilot/1.155.0",
-                "Copilot-Integration-Id": "vscode-chat",
-            },
-            json={
-                "model": model or "gpt-4o",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 10,
-                "temperature": 0,
-            },
-        )
-        resp.raise_for_status()
-        raw = resp.json()["choices"][0]["message"]["content"].strip().replace(",", ".")
-        return max(0.0, min(1.0, float(raw.split()[0])))
+    import openai
+    client = openai.AsyncOpenAI(
+        api_key=api_key or "no-key",
+        base_url=base_url.rstrip("/") + "/v1" if not base_url.rstrip("/").endswith("/v1") else base_url,
+    )
+    custom = await get_ai_prompt_override()
+    prompt = _build_prompt_en(custom, text)
+    response = await client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=10,
+        temperature=0,
+    )
+    raw = response.choices[0].message.content.strip().replace(",", ".")
+    return max(0.0, min(1.0, float(raw.split()[0])))
 
 
 async def _call_huggingface(api_key: str, model: str, text: str) -> float:
@@ -277,8 +249,9 @@ async def _call_provider(provider: AIProvider, text: str) -> float:
         return await _call_blackbox(provider.api_key, provider.model, text)
     elif provider.provider_type == "huggingface":
         return await _call_huggingface(provider.api_key, provider.model, text)
-    elif provider.provider_type == "github_copilot":
-        return await _call_github_copilot(provider.api_key, provider.model, text)
+    elif provider.provider_type == "litellm":
+        base_url = getattr(provider, "base_url", None) or "http://localhost:4000"
+        return await _call_litellm(provider.api_key, provider.model, base_url, text)
     raise ValueError(f"Unknown provider type: {provider.provider_type}")
 
 

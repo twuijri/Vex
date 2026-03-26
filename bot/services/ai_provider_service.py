@@ -37,6 +37,7 @@ async def add_provider(
     api_key: str,
     model: str,
     priority: int = 10,
+    base_url: str | None = None,
 ) -> AIProvider:
     """Add a new AI provider."""
     async with get_db() as session:
@@ -47,6 +48,7 @@ async def add_provider(
             model=model,
             priority=priority,
             is_active=True,
+            base_url=base_url or None,
         )
         session.add(provider)
         await session.flush()

@@ -224,14 +224,36 @@ MODELS_ENDPOINTS = {
     "blackbox": "https://api.blackbox.ai/v1/models",
     "google_studio": None,   # Static list
     "huggingface": None,     # Static list
+    "litellm": None,         # Dynamic — built from base_url
 }
 
 @router.get("/ai-providers/fetch-models")
 async def fetch_provider_models(
     provider_type: str = Query(...),
-    api_key: str = Query(...),
+    api_key: str = Query(""),
+    base_url: str = Query(""),
 ):
     """Fetch available model IDs for a given provider type and API key."""
+    # LiteLLM: call /v1/models on the self-hosted server
+    if provider_type == "litellm":
+        if not base_url:
+            return JSONResponse({"models": [], "error": "أدخل رابط السيرفر أولاً"})
+        url = base_url.rstrip("/")
+        if not url.endswith("/v1"):
+            url += "/v1"
+        url += "/models"
+        try:
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+            models = [m.get("id", m) if isinstance(m, dict) else str(m)
+                      for m in data.get("data", data.get("models", []))]
+            return JSONResponse({"models": sorted(models)})
+        except Exception as e:
+            return JSONResponse({"models": [], "error": str(e)}, status_code=200)
+
     url = MODELS_ENDPOINTS.get(provider_type)
     if not url:
         return JSONResponse({"models": [], "error": "لا يدعم الجلب التلقائي"})
@@ -249,100 +271,6 @@ async def fetch_provider_models(
     except Exception as e:
         return JSONResponse({"models": [], "error": str(e)}, status_code=200)
 
-
-# ── GitHub Copilot Device Flow ───────────────────────────────────────────────
-
-# Well-known public client ID used by open-source Copilot clients (copilot.vim, etc.)
-_COPILOT_DEFAULT_CLIENT_ID = "Iv1.b507a08c87ecfe98"
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", _COPILOT_DEFAULT_CLIENT_ID)
-
-# Temporary in-memory store: device_code -> {name, model, priority}
-_device_sessions: dict[str, dict] = {}
-
-
-@router.get("/ai-providers/github-copilot/device-start")
-async def github_copilot_device_start(
-    name: str = "GitHub Copilot",
-    model: str = "gpt-4o",
-    priority: int = 10,
-):
-    """Step 1: Request a device code from GitHub and return it to the UI."""
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                "https://github.com/login/device/code",
-                headers={"Accept": "application/json"},
-                data={"client_id": GITHUB_CLIENT_ID, "scope": "read:user"},
-            )
-            data = resp.json()
-    except Exception as e:
-        return JSONResponse({"error": f"فشل الاتصال بـ GitHub: {e}"}, status_code=500)
-
-    if "error" in data:
-        return JSONResponse({"error": data.get("error_description", str(data))}, status_code=400)
-
-    device_code = data["device_code"]
-    _device_sessions[device_code] = {"name": name, "model": model, "priority": priority}
-
-    return JSONResponse({
-        "device_code": device_code,
-        "user_code": data["user_code"],
-        "verification_uri": data.get("verification_uri", "https://github.com/login/device"),
-        "expires_in": data.get("expires_in", 900),
-        "interval": data.get("interval", 5),
-    })
-
-
-@router.get("/ai-providers/github-copilot/device-poll")
-async def github_copilot_device_poll(device_code: str = ""):
-    """Step 2: Poll GitHub to check if user has authorized the device."""
-    if not device_code or device_code not in _device_sessions:
-        return JSONResponse({"status": "error", "message": "جلسة غير صالحة"}, status_code=400)
-
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                "https://github.com/login/oauth/access_token",
-                headers={"Accept": "application/json"},
-                data={
-                    "client_id": GITHUB_CLIENT_ID,
-                    "device_code": device_code,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                },
-            )
-            data = resp.json()
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)})
-
-    error = data.get("error", "")
-
-    if error == "authorization_pending":
-        return JSONResponse({"status": "pending"})
-
-    if error == "slow_down":
-        return JSONResponse({"status": "slow_down"})
-
-    if error == "expired_token":
-        _device_sessions.pop(device_code, None)
-        return JSONResponse({"status": "expired"})
-
-    if error:
-        return JSONResponse({"status": "error", "message": data.get("error_description", error)})
-
-    # Success — save provider
-    access_token = data.get("access_token", "")
-    if not access_token:
-        return JSONResponse({"status": "error", "message": "لم يتم الحصول على توكن"})
-
-    session = _device_sessions.pop(device_code, {})
-    await add_provider(
-        name=session.get("name", "GitHub Copilot"),
-        provider_type="github_copilot",
-        api_key=access_token,
-        model=session.get("model", "gpt-4o"),
-        priority=session.get("priority", 10),
-    )
-    return JSONResponse({"status": "success"})
 
 
 # ── AI Provider Management ────────────────────────────────────────────────────
@@ -371,6 +299,7 @@ async def ai_providers_add(
     api_key: str = Form(...),
     model: str = Form(...),
     priority: int = Form(10),
+    base_url: str = Form(""),
 ):
     """Add a new AI provider"""
     await add_provider(
@@ -379,6 +308,7 @@ async def ai_providers_add(
         api_key=api_key,
         model=model,
         priority=priority,
+        base_url=base_url.strip() or None,
     )
     return RedirectResponse(url="/dashboard/ai-providers", status_code=303)
 
