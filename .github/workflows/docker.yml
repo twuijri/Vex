@@ -27,3 +27,7 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/vex:latest
+
+      - name: Notify Dockhand (redeploy)
+        if: ${{ secrets.DOCKHAND_WEBHOOK_URL != '' }}
+        run: curl -s -X POST "${{ secrets.DOCKHAND_WEBHOOK_URL }}"
