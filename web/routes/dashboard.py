@@ -224,14 +224,16 @@ async def github_copilot_device_start(
     priority: int = 10,
 ):
     """Step 1: Request a device code from GitHub and return it to the UI."""
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(
-            "https://github.com/login/device/code",
-            headers={"Accept": "application/json"},
-            data={"client_id": GITHUB_CLIENT_ID, "scope": "copilot"},
-        )
-        data = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://github.com/login/device/code",
+                headers={"Accept": "application/json"},
+                data={"client_id": GITHUB_CLIENT_ID, "scope": "read:user"},
+            )
+            data = resp.json()
+    except Exception as e:
+        return JSONResponse({"error": f"فشل الاتصال بـ GitHub: {e}"}, status_code=500)
 
     if "error" in data:
         return JSONResponse({"error": data.get("error_description", str(data))}, status_code=400)
@@ -254,17 +256,20 @@ async def github_copilot_device_poll(device_code: str = ""):
     if not device_code or device_code not in _device_sessions:
         return JSONResponse({"status": "error", "message": "جلسة غير صالحة"}, status_code=400)
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(
-            "https://github.com/login/oauth/access_token",
-            headers={"Accept": "application/json"},
-            data={
-                "client_id": GITHUB_CLIENT_ID,
-                "device_code": device_code,
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            },
-        )
-        data = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://github.com/login/oauth/access_token",
+                headers={"Accept": "application/json"},
+                data={
+                    "client_id": GITHUB_CLIENT_ID,
+                    "device_code": device_code,
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                },
+            )
+            data = resp.json()
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)})
 
     error = data.get("error", "")
 
