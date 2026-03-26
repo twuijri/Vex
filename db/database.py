@@ -37,6 +37,10 @@ async def init_db():
             # BotConfig new columns added after initial schema
             "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_prompt_override TEXT",
             "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_debug_channel_id BIGINT",
+            "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_alert_threshold FLOAT DEFAULT 0.5",
+            "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_auto_delete_threshold FLOAT DEFAULT 0.9",
+            # AIProvider: base_url for self-hosted providers (LiteLLM)
+            "ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS base_url VARCHAR(500)",
             # AIProviderStat: raw response column
             "ALTER TABLE ai_provider_stats ADD COLUMN IF NOT EXISTS last_raw_response TEXT",
         ]
