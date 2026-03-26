@@ -207,89 +207,94 @@ async def fetch_provider_models(
         return JSONResponse({"models": [], "error": str(e)}, status_code=200)
 
 
-# ── GitHub Copilot OAuth ─────────────────────────────────────────────────────
+# ── GitHub Copilot Device Flow ───────────────────────────────────────────────
 
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+# Well-known public client ID used by open-source Copilot clients (copilot.vim, etc.)
+_COPILOT_DEFAULT_CLIENT_ID = "Iv1.b507a08c87ecfe98"
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", _COPILOT_DEFAULT_CLIENT_ID)
 
-# In-memory state store (per-process; fine for single-instance dashboard)
-_oauth_states: dict[str, str] = {}  # state -> "pending"
+# Temporary in-memory store: device_code -> {name, model, priority}
+_device_sessions: dict[str, dict] = {}
 
 
-@router.get("/ai-providers/github-copilot/connect")
-async def github_copilot_connect(request: Request, name: str = "GitHub Copilot", model: str = "gpt-4o", priority: int = 10):
-    """Start GitHub OAuth flow for Copilot."""
-    if not GITHUB_CLIENT_ID:
-        return RedirectResponse(
-            url="/dashboard/ai-providers?msg=❌ GITHUB_CLIENT_ID غير مضبوط في متغيرات البيئة",
-            status_code=303,
+@router.get("/ai-providers/github-copilot/device-start")
+async def github_copilot_device_start(
+    name: str = "GitHub Copilot",
+    model: str = "gpt-4o",
+    priority: int = 10,
+):
+    """Step 1: Request a device code from GitHub and return it to the UI."""
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            "https://github.com/login/device/code",
+            headers={"Accept": "application/json"},
+            data={"client_id": GITHUB_CLIENT_ID, "scope": "copilot"},
         )
-    state = secrets.token_urlsafe(16)
-    _oauth_states[state] = f"{name}||{model}||{priority}"
+        data = resp.json()
 
-    params = (
-        f"client_id={GITHUB_CLIENT_ID}"
-        f"&scope=copilot"
-        f"&state={state}"
-        f"&allow_signup=false"
-    )
-    return RedirectResponse(
-        url=f"https://github.com/login/oauth/authorize?{params}",
-        status_code=302,
-    )
+    if "error" in data:
+        return JSONResponse({"error": data.get("error_description", str(data))}, status_code=400)
+
+    device_code = data["device_code"]
+    _device_sessions[device_code] = {"name": name, "model": model, "priority": priority}
+
+    return JSONResponse({
+        "device_code": device_code,
+        "user_code": data["user_code"],
+        "verification_uri": data.get("verification_uri", "https://github.com/login/device"),
+        "expires_in": data.get("expires_in", 900),
+        "interval": data.get("interval", 5),
+    })
 
 
-@router.get("/ai-providers/github-copilot/callback")
-async def github_copilot_callback(code: str = "", state: str = "", error: str = ""):
-    """Handle GitHub OAuth callback and save provider."""
-    if error:
-        return RedirectResponse(
-            url=f"/dashboard/ai-providers?msg=❌ رفض المستخدم الإذن: {error}",
-            status_code=303,
-        )
+@router.get("/ai-providers/github-copilot/device-poll")
+async def github_copilot_device_poll(device_code: str = ""):
+    """Step 2: Poll GitHub to check if user has authorized the device."""
+    if not device_code or device_code not in _device_sessions:
+        return JSONResponse({"status": "error", "message": "جلسة غير صالحة"}, status_code=400)
 
-    saved = _oauth_states.pop(state, None)
-    if not saved:
-        return RedirectResponse(
-            url="/dashboard/ai-providers?msg=❌ state غير صالح أو منتهي الصلاحية",
-            status_code=303,
-        )
-
-    name, model, priority_str = saved.split("||")
-
-    # Exchange code for access token
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
             "https://github.com/login/oauth/access_token",
             headers={"Accept": "application/json"},
             data={
                 "client_id": GITHUB_CLIENT_ID,
-                "client_secret": GITHUB_CLIENT_SECRET,
-                "code": code,
+                "device_code": device_code,
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             },
         )
         data = resp.json()
 
+    error = data.get("error", "")
+
+    if error == "authorization_pending":
+        return JSONResponse({"status": "pending"})
+
+    if error == "slow_down":
+        return JSONResponse({"status": "slow_down"})
+
+    if error == "expired_token":
+        _device_sessions.pop(device_code, None)
+        return JSONResponse({"status": "expired"})
+
+    if error:
+        return JSONResponse({"status": "error", "message": data.get("error_description", error)})
+
+    # Success — save provider
     access_token = data.get("access_token", "")
     if not access_token:
-        err = data.get("error_description", str(data))
-        return RedirectResponse(
-            url=f"/dashboard/ai-providers?msg=❌ فشل الحصول على التوكن: {err}",
-            status_code=303,
-        )
+        return JSONResponse({"status": "error", "message": "لم يتم الحصول على توكن"})
 
-    # Save provider with OAuth token as api_key
+    session = _device_sessions.pop(device_code, {})
     await add_provider(
-        name=name,
+        name=session.get("name", "GitHub Copilot"),
         provider_type="github_copilot",
         api_key=access_token,
-        model=model,
-        priority=int(priority_str),
+        model=session.get("model", "gpt-4o"),
+        priority=session.get("priority", 10),
     )
-    return RedirectResponse(
-        url="/dashboard/ai-providers?msg=✅ تم ربط GitHub Copilot بنجاح",
-        status_code=303,
-    )
+    return JSONResponse({"status": "success"})
 
 
 # ── AI Provider Management ────────────────────────────────────────────────────
