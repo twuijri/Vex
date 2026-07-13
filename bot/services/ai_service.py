@@ -171,23 +171,35 @@ def _build_prompt_en(custom_rules: str | None, text: str) -> str:
 def _extract_score(raw: str) -> float:
     """Extract a 0.0–1.0 score from any model output.
 
-    Handles: plain numbers, comma decimals, surrounding text
-    ("Score: 0.8 because..."), thinking blocks (<think>...</think>),
-    and markdown formatting.
+    Handles: plain numbers, comma decimals, Arabic-Indic digits,
+    thinking blocks (<think>...</think>), and models that restate the
+    scale ("على مقياس من 0.0 إلى 1.0 أقيمها بـ 0.9") — the scale pair is
+    stripped and the LAST number the model says wins, since chatty and
+    reasoning models put the actual answer at the end.
     """
     if not raw:
         raise ValueError("empty model response")
     # Drop reasoning blocks — the answer comes after them
     cleaned = re.sub(r"<think>.*?(?:</think>|$)", "", raw, flags=re.S | re.I)
-    cleaned = cleaned.replace(",", ".").replace("٫", ".")
-    for match in re.findall(r"\d+(?:\.\d+)?", cleaned):
-        val = float(match)
-        if 0.0 <= val <= 1.0:
-            return val
+    cleaned = cleaned.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩٫", "0123456789."))
+    cleaned = cleaned.replace(",", ".")
+    # Strip mentions of the scale itself: "0.0 إلى 1.0", "0.0-1.0", "0 to 1"...
+    cleaned = re.sub(
+        r"0(?:\.0+)?\s*(?:إلى|الى|و|to|and|[-–—/])\s*1(?:\.0+)?",
+        " ", cleaned, flags=re.I,
+    )
+    # Scan lines from the end — the final line normally carries the verdict
+    for line in reversed([l for l in cleaned.splitlines() if l.strip()]):
+        in_range = [
+            float(m) for m in re.findall(r"\d+(?:\.\d+)?", line)
+            if 0.0 <= float(m) <= 1.0
+        ]
+        if in_range:
+            return in_range[-1]
     raise ValueError(f"no score 0.0-1.0 found in response: {raw[:200]!r}")
 
 
-async def _call_google_studio(api_key: str, model: str, text: str) -> float:
+async def _call_google_studio(api_key: str, model: str, text: str) -> tuple[float, str]:
     """Call Google AI Studio (Gemini) API."""
     import google.generativeai as genai
     genai.configure(api_key=api_key)
@@ -196,10 +208,10 @@ async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     custom = await get_ai_prompt_override()
     prompt = _build_prompt_ar(custom, text)
     response = await gemini_model.generate_content_async(prompt)
-    return _extract_score(response.text)
+    return _extract_score(response.text), response.text
 
 
-async def _openai_compatible_score(client, model: str, prompt: str) -> float:
+async def _openai_compatible_score(client, model: str, prompt: str) -> tuple[float, str]:
     """Call an OpenAI-compatible chat endpoint, adapting to model quirks.
 
     - Starts with temperature=0 + max_tokens cap; if the server rejects a
@@ -240,7 +252,7 @@ async def _openai_compatible_score(client, model: str, prompt: str) -> float:
         message = response.choices[0].message
         content = message.content or getattr(message, "reasoning_content", None) or ""
         try:
-            return _extract_score(content)
+            return _extract_score(content), content
         except ValueError as e:
             # Thinking models can burn the whole budget on reasoning:
             # give more room once, then remove the cap entirely.
@@ -258,7 +270,7 @@ async def _openai_compatible_score(client, model: str, prompt: str) -> float:
     raise last_error or ValueError("adaptive call retries exhausted")
 
 
-async def _call_blackbox(api_key: str, model: str, text: str) -> float:
+async def _call_blackbox(api_key: str, model: str, text: str) -> tuple[float, str]:
     """Call Blackbox.ai (OpenAI-compatible endpoint)."""
     import openai
     client = openai.AsyncOpenAI(
@@ -270,7 +282,7 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
     return await _openai_compatible_score(client, model or "blackboxai", prompt)
 
 
-async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> float:
+async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> tuple[float, str]:
     """Call any LiteLLM-compatible endpoint (self-hosted or proxy).
 
     base_url example: http://my-server:4000
@@ -286,7 +298,7 @@ async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> f
     return await _openai_compatible_score(client, model, prompt)
 
 
-async def _call_huggingface(api_key: str, model: str, text: str) -> float:
+async def _call_huggingface(api_key: str, model: str, text: str) -> tuple[float, str]:
     """Call HuggingFace Inference API with zero-shot classification."""
     import httpx
     url = f"https://api-inference.huggingface.co/models/{model}"
@@ -306,13 +318,13 @@ async def _call_huggingface(api_key: str, model: str, text: str) -> float:
     scores = data.get("scores", [])
     target = "رسالة مسيئة أو شتم أو تحرش"
     if target in labels:
-        return float(scores[labels.index(target)])
-    return 0.0
+        return float(scores[labels.index(target)]), str(data)[:200]
+    return 0.0, str(data)[:200]
 
 
 # ─── Dispatch caller by type ──────────────────────────────────────────────────
 
-async def _call_provider(provider: AIProvider, text: str) -> float:
+async def _call_provider(provider: AIProvider, text: str) -> tuple[float, str]:
     # Credentials live on the linked endpoint; legacy rows fall back to inline values
     endpoint = getattr(provider, "endpoint", None)
     api_key = endpoint.api_key if endpoint else provider.api_key
@@ -361,9 +373,10 @@ async def analyze_text(text: str) -> float:
             continue
 
         try:
-            score = await _call_provider(provider, text)
-            await _record_usage(key_label, "ok", raw_response=str(score))
-            logger.info(f"[AI] '{provider.name}' → score={score:.2f}")
+            score, raw_text = await _call_provider(provider, text)
+            raw_summary = f"{(raw_text or '').strip()[:300]} → score={score:.2f}"
+            await _record_usage(key_label, "ok", raw_response=raw_summary)
+            logger.info(f"[AI] '{provider.name}' → score={score:.2f} raw={raw_text!r:.120}")
             return score
 
         except Exception as e:

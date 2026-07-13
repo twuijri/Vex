@@ -62,7 +62,7 @@ async def filter_media_messages(update: Update, context: ContextTypes.DEFAULT_TY
         media_type = "video_note"
     elif message.animation:
         media_type = "gif"
-    elif message.forward_date:
+    elif message.forward_origin:  # PTB v21: forward_date was replaced by forward_origin
         media_type = "forward"
     elif message.location or message.venue:
         media_type = "location"
