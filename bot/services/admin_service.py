@@ -69,6 +69,13 @@ async def remove_admin(telegram_id: int) -> str:
         return "⚠️ العضو ليس مشرف في البوت"
 
 
+async def get_admin_count() -> int:
+    """Count bot admins"""
+    async with get_db() as session:
+        result = await session.execute(select(func.count()).select_from(Admin))
+        return result.scalar() or 0
+
+
 async def list_admins() -> str:
     """List all bot admins"""
     async with get_db() as session:

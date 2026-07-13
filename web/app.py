@@ -18,6 +18,7 @@ logger = logging.getLogger("vex.web")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+SPA_DIR = os.path.join(BASE_DIR, "spa")  # React dashboard build (frontend/dist)
 
 app = FastAPI(title="Vex Dashboard", docs_url=None, redoc_url=None)
 
@@ -45,12 +46,30 @@ def set_bot_app(bot_app):
 
 # Include routes
 from web.routes.setup import router as setup_router
-from web.routes.dashboard import router as dashboard_router
-from web.routes.auth import router as auth_router
+from web.routes.api import router as api_router
 
 app.include_router(setup_router)
-app.include_router(auth_router)
-app.include_router(dashboard_router)
+app.include_router(api_router)
+
+# ── React SPA (dashboard) ─────────────────────────────────────────────────────
+# The built frontend lives in web/spa (frontend/dist copied at build time).
+# Assets are mounted; any /dashboard* path serves index.html so client-side
+# routing and refresh/deep links work.
+if os.path.isdir(os.path.join(SPA_DIR, "assets")):
+    app.mount("/dashboard/assets", StaticFiles(directory=os.path.join(SPA_DIR, "assets")), name="spa-assets")
+
+
+@app.get("/dashboard")
+@app.get("/dashboard/{rest:path}")
+async def spa_index(rest: str = ""):
+    index = os.path.join(SPA_DIR, "index.html")
+    if os.path.exists(index):
+        from starlette.responses import FileResponse
+        return FileResponse(index, media_type="text/html")
+    return Response(
+        status_code=503,
+        content="Dashboard frontend is not built. Run: cd frontend && npm run build",
+    )
 
 
 @app.get("/")

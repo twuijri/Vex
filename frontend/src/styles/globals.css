@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Vex theme tokens (vantra design system, gold-on-navy) ---------- */
+
+@layer base {
+  :root {
+    /* Deep navy UI with a warm gold accent — Vex identity */
+    --bg: 228 34% 8%;
+    --bg-elev: 227 28% 12%;
+    --ink: 220 25% 96%;
+    --muted: 224 12% 62%;
+    --border: 226 20% 19%;
+    --ring: 43 92% 56%;
+
+    --accent: 43 92% 56%;        /* #f5b82e gold */
+    --accent-fg: 228 40% 8%;     /* dark navy text on gold */
+    --accent-from: 43 96% 58%;
+    --accent-to: 30 92% 60%;     /* amber-orange */
+
+    --success: 152 60% 50%;
+    --warning: 38 92% 58%;
+    --danger: 0 75% 62%;
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  label[for],
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  :where(html[dir='rtl']) :where([dir='ltr']) {
+    unicode-bidi: isolate;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    background: hsl(var(--bg));
+    color: hsl(var(--ink));
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: hsl(var(--accent) / 0.35);
+    color: hsl(var(--ink));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ---------- Utility components ---------- */
+
+@layer components {
+  .spotlight-bg {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(var(--accent-from) / 0.13), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 110% 10%, hsl(var(--accent-to) / 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 50% at -10% 110%, hsl(var(--accent-from) / 0.07), transparent 60%),
+      hsl(var(--bg));
+  }
+
+  .gradient-border {
+    position: relative;
+    isolation: isolate;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(
+      from 0deg,
+      hsl(var(--accent-from)) 0deg,
+      hsl(var(--accent-to)) 60deg,
+      transparent 120deg,
+      transparent 220deg,
+      hsl(var(--accent-from) / 0.4) 280deg,
+      hsl(var(--accent-from)) 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: border-spin 7s linear infinite;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .gradient-border::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    box-shadow:
+      0 0 36px -12px hsl(var(--accent) / 0.32),
+      0 0 80px -32px hsl(var(--accent-from) / 0.4);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .glass-card {
+    background: linear-gradient(180deg, hsl(var(--bg-elev) / 0.92), hsl(var(--bg-elev) / 0.78));
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  }
+
+  .panel {
+    background: hsl(var(--bg-elev) / 0.65);
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .text-accent-gradient {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--accent-from)) 0%,
+      hsl(var(--accent-to)) 60%,
+      hsl(var(--accent-from)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 18px hsl(var(--accent) / 0.55));
+  }
+
+  .wordmark {
+    color: hsl(var(--ink));
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 28px hsl(var(--accent) / 0.5), 0 0 6px hsl(var(--accent-from) / 0.4);
+  }
+}
+
+* {
+  transition: background-color 360ms ease, border-color 360ms ease,
+    color 240ms ease, box-shadow 240ms ease;
+}
+
+[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
+}
