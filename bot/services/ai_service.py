@@ -423,7 +423,7 @@ async def get_provider_stats(days: int = 30) -> list[dict]:
             "requests": r.requests_count,
             "status": r.last_status or "—",
             "last_used": r.last_used_at.strftime("%H:%M") if r.last_used_at else "—",
-            "error": (r.last_error or "")[:300],
+            "error": (r.last_error or "")[:1500],
             "raw_response": r.last_raw_response or "",
         }
         for r in rows

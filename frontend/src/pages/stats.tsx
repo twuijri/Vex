@@ -1,11 +1,35 @@
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LineChart, Trash2, CircleCheck, CircleAlert, Clock } from 'lucide-react'
+import { LineChart, Trash2, CircleCheck, CircleAlert, Clock, ChevronDown } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast'
 import { api, type StatRow } from '@/lib/api'
 import { useData } from '@/lib/use-data'
 import { cn } from '@/lib/utils'
 import { PageSpinner, EmptyState } from '@/pages/groups'
+
+function ErrorLine({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      className="mt-2.5 flex w-full items-start gap-2 rounded-lg bg-danger/5 px-3 py-1.5 text-start ring-1 ring-danger/15 transition-colors hover:bg-danger/10"
+      title={open ? 'اضغط للطي' : 'اضغط لعرض الخطأ كاملاً'}
+    >
+      <ChevronDown className={cn('mt-0.5 size-3 shrink-0 text-danger/70 transition-transform', open && 'rotate-180')} />
+      <span
+        dir="ltr"
+        className={cn(
+          'min-w-0 flex-1 text-start font-mono text-[11px] leading-relaxed text-danger/90',
+          open ? 'whitespace-pre-wrap break-all' : 'truncate'
+        )}
+      >
+        {text}
+      </span>
+    </button>
+  )
+}
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: typeof CircleCheck }> = {
   ok: { label: 'سليم', cls: 'text-success bg-success/10 ring-success/25', icon: CircleCheck },
@@ -41,11 +65,12 @@ export function StatsPage() {
             {data.summaries.map((s, i) => (
               <motion.div
                 key={s.label}
+                className="min-w-0"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className="p-4">
+                <Card className="overflow-hidden p-4">
                   <p className="truncate text-xs text-muted" dir="ltr">{s.label}</p>
                   <p className="mt-2 text-2xl font-bold tabular-nums">{s.today.toLocaleString('en')}</p>
                   <p className="mt-0.5 text-[11px] text-muted">
@@ -74,11 +99,12 @@ export function StatsPage() {
                     <motion.div
                       key={row.id}
                       layout
+                      className="min-w-0"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97 }}
                     >
-                      <Card className="p-4">
+                      <Card className="overflow-hidden p-4">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1', meta.cls)}>
                             <Icon className="size-3.5" />
@@ -102,11 +128,7 @@ export function StatsPage() {
                             <Trash2 className="size-3.5" />
                           </button>
                         </div>
-                        {row.error && (
-                          <p className="mt-2.5 truncate rounded-lg bg-danger/5 px-3 py-1.5 font-mono text-[11px] text-danger/90 ring-1 ring-danger/15" dir="ltr" title={row.error}>
-                            {row.error}
-                          </p>
-                        )}
+                        {row.error && <ErrorLine text={row.error} />}
                         {!row.error && row.raw_response && (
                           <p className="mt-2.5 truncate rounded-lg bg-bg/50 px-3 py-1.5 font-mono text-[11px] text-muted ring-1 ring-border" dir="ltr">
                             ↳ {row.raw_response}
