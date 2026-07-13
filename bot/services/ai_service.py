@@ -9,10 +9,12 @@ Supported provider types:
   - huggingface    → Hugging Face Inference API (zero-shot classification)
 """
 import logging
+import re
 from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import select, and_
+from sqlalchemy.orm import selectinload
 
 from db.database import get_db
 from db.models import AIProviderStat, AIProvider
@@ -53,6 +55,10 @@ PERMANENT_ERROR_KEYWORDS = [
     "api_key_invalid", "invalid api key", "api key not valid",
     "permission_denied", "api_key_invalid",
     "not_found", "404",
+    # Virtual key not allowed to use this model (LiteLLM proxy)
+    "key not allowed to access model",
+    # Model has no healthy deployment on the proxy (removed/renamed)
+    "no healthy deployment",
 ]
 
 
@@ -162,6 +168,25 @@ def _build_prompt_en(custom_rules: str | None, text: str) -> str:
     return _FIXED_PREFIX_EN + rules + _FIXED_SUFFIX_EN.replace("{text}", text[:500])
 
 
+def _extract_score(raw: str) -> float:
+    """Extract a 0.0–1.0 score from any model output.
+
+    Handles: plain numbers, comma decimals, surrounding text
+    ("Score: 0.8 because..."), thinking blocks (<think>...</think>),
+    and markdown formatting.
+    """
+    if not raw:
+        raise ValueError("empty model response")
+    # Drop reasoning blocks — the answer comes after them
+    cleaned = re.sub(r"<think>.*?(?:</think>|$)", "", raw, flags=re.S | re.I)
+    cleaned = cleaned.replace(",", ".").replace("٫", ".")
+    for match in re.findall(r"\d+(?:\.\d+)?", cleaned):
+        val = float(match)
+        if 0.0 <= val <= 1.0:
+            return val
+    raise ValueError(f"no score 0.0-1.0 found in response: {raw[:200]!r}")
+
+
 async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     """Call Google AI Studio (Gemini) API."""
     import google.generativeai as genai
@@ -171,8 +196,66 @@ async def _call_google_studio(api_key: str, model: str, text: str) -> float:
     custom = await get_ai_prompt_override()
     prompt = _build_prompt_ar(custom, text)
     response = await gemini_model.generate_content_async(prompt)
-    raw = response.text.strip().replace(",", ".")
-    return max(0.0, min(1.0, float(raw.split()[0])))
+    return _extract_score(response.text)
+
+
+async def _openai_compatible_score(client, model: str, prompt: str) -> float:
+    """Call an OpenAI-compatible chat endpoint, adapting to model quirks.
+
+    - Starts with temperature=0 + max_tokens cap; if the server rejects a
+      parameter (e.g. Kimi only accepts temperature=1, some models reject
+      max_tokens), that parameter is dropped and the call retried.
+    - Reasoning models may spend the token budget on thinking and return
+      empty content — retried once with a larger budget, then without a cap.
+    - The score is regex-extracted, so extra prose around the number is fine.
+    """
+    import openai
+
+    kwargs: dict = {"temperature": 0, "max_tokens": 200}
+    last_error: Exception | None = None
+
+    for _ in range(4):
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                **kwargs,
+            )
+        except openai.BadRequestError as e:
+            err = str(e).lower()
+            dropped = False
+            for param in ("temperature", "max_tokens", "top_p"):
+                if param in kwargs and param in err:
+                    kwargs.pop(param)
+                    dropped = True
+                    logger.info(f"[AI] '{model}' rejected '{param}', retrying without it.")
+            if not dropped:
+                raise
+            last_error = e
+            continue
+
+        if not response.choices:
+            raise ValueError(f"empty choices in response: {response}")
+
+        message = response.choices[0].message
+        content = message.content or getattr(message, "reasoning_content", None) or ""
+        try:
+            return _extract_score(content)
+        except ValueError as e:
+            # Thinking models can burn the whole budget on reasoning:
+            # give more room once, then remove the cap entirely.
+            finish = getattr(response.choices[0], "finish_reason", None)
+            cap = kwargs.get("max_tokens")
+            if finish == "length" and cap is not None:
+                kwargs["max_tokens"] = 4000 if cap < 4000 else None
+                if kwargs["max_tokens"] is None:
+                    kwargs.pop("max_tokens")
+                logger.info(f"[AI] '{model}' hit token cap while thinking, retrying with a larger budget.")
+                last_error = e
+                continue
+            raise
+
+    raise last_error or ValueError("adaptive call retries exhausted")
 
 
 async def _call_blackbox(api_key: str, model: str, text: str) -> float:
@@ -184,18 +267,12 @@ async def _call_blackbox(api_key: str, model: str, text: str) -> float:
     )
     custom = await get_ai_prompt_override()
     prompt = _build_prompt_en(custom, text)
-    response = await client.chat.completions.create(
-        model=model or "blackboxai",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=10,
-    )
-    raw = response.choices[0].message.content.strip().replace(",", ".")
-    return max(0.0, min(1.0, float(raw.split()[0])))
+    return await _openai_compatible_score(client, model or "blackboxai", prompt)
 
 
 async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> float:
     """Call any LiteLLM-compatible endpoint (self-hosted or proxy).
-    
+
     base_url example: http://my-server:4000
     model example:    gpt-4o, claude-3-5-sonnet, openai/gpt-4o
     """
@@ -206,14 +283,7 @@ async def _call_litellm(api_key: str, model: str, base_url: str, text: str) -> f
     )
     custom = await get_ai_prompt_override()
     prompt = _build_prompt_en(custom, text)
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=10,
-        temperature=0,
-    )
-    raw = response.choices[0].message.content.strip().replace(",", ".")
-    return max(0.0, min(1.0, float(raw.split()[0])))
+    return await _openai_compatible_score(client, model, prompt)
 
 
 async def _call_huggingface(api_key: str, model: str, text: str) -> float:
@@ -243,15 +313,19 @@ async def _call_huggingface(api_key: str, model: str, text: str) -> float:
 # ─── Dispatch caller by type ──────────────────────────────────────────────────
 
 async def _call_provider(provider: AIProvider, text: str) -> float:
+    # Credentials live on the linked endpoint; legacy rows fall back to inline values
+    endpoint = getattr(provider, "endpoint", None)
+    api_key = endpoint.api_key if endpoint else provider.api_key
+    base_url = (endpoint.base_url if endpoint else None) or provider.base_url
+
     if provider.provider_type == "google_studio":
-        return await _call_google_studio(provider.api_key, provider.model, text)
+        return await _call_google_studio(api_key, provider.model, text)
     elif provider.provider_type == "blackbox":
-        return await _call_blackbox(provider.api_key, provider.model, text)
+        return await _call_blackbox(api_key, provider.model, text)
     elif provider.provider_type == "huggingface":
-        return await _call_huggingface(provider.api_key, provider.model, text)
+        return await _call_huggingface(api_key, provider.model, text)
     elif provider.provider_type == "litellm":
-        base_url = getattr(provider, "base_url", None) or "http://localhost:4000"
-        return await _call_litellm(provider.api_key, provider.model, base_url, text)
+        return await _call_litellm(api_key, provider.model, base_url or "http://localhost:4000", text)
     raise ValueError(f"Unknown provider type: {provider.provider_type}")
 
 
@@ -267,6 +341,7 @@ async def analyze_text(text: str) -> float:
     async with get_db() as session:
         result = await session.execute(
             select(AIProvider)
+            .options(selectinload(AIProvider.endpoint))
             .where(AIProvider.is_active == True)
             .order_by(AIProvider.priority)
         )

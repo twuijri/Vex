@@ -41,6 +41,8 @@ async def init_db():
             "ALTER TABLE bot_config ADD COLUMN IF NOT EXISTS ai_auto_delete_threshold FLOAT DEFAULT 0.9",
             # AIProvider: base_url for self-hosted providers (LiteLLM)
             "ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS base_url VARCHAR(500)",
+            # AIProvider: link to saved endpoint (connection profile)
+            "ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS endpoint_id INTEGER REFERENCES ai_endpoints(id) ON DELETE CASCADE",
             # AIProviderStat: raw response column
             "ALTER TABLE ai_provider_stats ADD COLUMN IF NOT EXISTS last_raw_response TEXT",
         ]
@@ -51,6 +53,49 @@ async def init_db():
                 # SQLite doesn't support IF NOT EXISTS on ALTER TABLE → skip
                 import logging
                 logging.getLogger("vex.db").debug(f"Migration skipped ({exc}): {sql}")
+
+    await _backfill_endpoints()
+
+
+async def _backfill_endpoints():
+    """Create an AIEndpoint for each legacy AIProvider row that has none,
+    deduplicating by (provider_type, api_key, base_url)."""
+    from db.models import AIProvider, AIEndpoint
+    from sqlalchemy import select
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(AIProvider).where(AIProvider.endpoint_id.is_(None))
+        )
+        orphans = list(result.scalars().all())
+        if not orphans:
+            return
+
+        ep_result = await session.execute(select(AIEndpoint))
+        endpoints = list(ep_result.scalars().all())
+
+        def find_endpoint(p):
+            for ep in endpoints:
+                if (ep.provider_type == p.provider_type
+                        and ep.api_key == (p.api_key or "")
+                        and (ep.base_url or None) == (p.base_url or None)):
+                    return ep
+            return None
+
+        for p in orphans:
+            ep = find_endpoint(p)
+            if not ep:
+                ep = AIEndpoint(
+                    name=p.name,
+                    provider_type=p.provider_type,
+                    api_key=p.api_key or "",
+                    base_url=p.base_url,
+                )
+                session.add(ep)
+                await session.flush()
+                endpoints.append(ep)
+            p.endpoint_id = ep.id
+        await session.commit()
 
 
 async def get_session() -> AsyncSession:

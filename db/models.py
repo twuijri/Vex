@@ -250,6 +250,26 @@ class AIProviderStat(Base):
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
+class AIEndpoint(Base):
+    """Saved AI provider connection (base_url + API key), reusable across models.
+    Persists independently of models — deleting a model keeps its endpoint."""
+    __tablename__ = "ai_endpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Human-readable label, e.g. 'LiteLLM VPS', 'Ollama Cloud'
+    name: Mapped[str] = mapped_column(String(100))
+    # Provider type: 'litellm' | 'google_studio' | 'blackbox' | 'huggingface'
+    provider_type: Mapped[str] = mapped_column(String(30))
+    api_key: Mapped[str] = mapped_column(Text, default="")
+    # Base URL — required for LiteLLM / self-hosted endpoints
+    base_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    models: Mapped[List["AIProvider"]] = relationship(
+        back_populates="endpoint", cascade="all, delete-orphan"
+    )
+
+
 class AIProvider(Base):
     """AI provider entries managed from the web dashboard"""
     __tablename__ = "ai_providers"
@@ -259,13 +279,19 @@ class AIProvider(Base):
     name: Mapped[str] = mapped_column(String(100))
     # Provider type: 'google_studio' | 'blackbox' | 'huggingface'
     provider_type: Mapped[str] = mapped_column(String(30))
-    # API key
+    # API key (legacy inline value — new rows resolve credentials via endpoint)
     api_key: Mapped[str] = mapped_column(Text)
     # Model name, e.g. 'gemini-1.5-flash', 'gpt-3.5-turbo'
     model: Mapped[str] = mapped_column(String(200))
     # Optional base URL — required for LiteLLM / self-hosted endpoints
     base_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    # Saved connection this model uses (nullable for legacy rows)
+    endpoint_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("ai_endpoints.id", ondelete="CASCADE"), nullable=True
+    )
     # Lower number = tried first
     priority: Mapped[int] = mapped_column(Integer, default=10)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    endpoint: Mapped[Optional["AIEndpoint"]] = relationship(back_populates="models")
